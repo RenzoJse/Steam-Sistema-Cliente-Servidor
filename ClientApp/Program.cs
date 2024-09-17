@@ -2,13 +2,65 @@
 using System.Net;
 using System.Text;
 using Comunicacion;
+using Comunicacion.Dominio;
 
 namespace ClientApp
 {
     internal class Program
     {
         static readonly SettingsManager settingsMngr = new SettingsManager();
+        static readonly UserManager userManager = new UserManager();
+        static NetworkDataHelper networkDataHelper;
+        static bool clientRunning = false;
+        
+        private static void LoginMenu()
+        {
+            Console.WriteLine("1. Register");
+            Console.WriteLine("2. Login");
+            Console.WriteLine("3. Exit");
+        }
 
+        private static void RegisterUser()
+        {
+            Console.Write("Enter username: ");
+            string username = Console.ReadLine();
+            Console.Write("Enter password: ");
+            string password = Console.ReadLine();
+
+            var user = userManager.AuthenticateUser(username, password);
+            if (user != null)
+            {
+                Console.WriteLine("Login successful!");
+                // Proceed with user session
+            }
+            else
+            {
+                Console.WriteLine("Invalid username or password.");
+            }
+        }
+        
+        private static void SendAndReceiveMessage(string message)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
+            byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
+            try
+            {
+                // ENVIO AL SERVER
+                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
+                networkDataHelper.Send(data); // Envio el mensaje (parte variable)
+
+                // RECIBO DEL SERVER
+                byte[] responseDataLength = networkDataHelper.Receive(4);
+                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine("Connection with the server has been interrupted");
+                clientRunning = false;
+            }
+        }
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Client Application..");
@@ -27,42 +79,31 @@ namespace ClientApp
             Console.WriteLine("Connecting to server...");
             socketClient.Connect(remoteEndpoint);
             Console.WriteLine("Connected to server!!!!");
-            Console.WriteLine("Type a message and press enter to send it");
-            bool clientRunning = true;
+            clientRunning = true;
 
-            NetworkDataHelper networkDataHelper = new NetworkDataHelper(socketClient);
-
+            networkDataHelper = new NetworkDataHelper(socketClient);
 
             while (clientRunning)
             {
-                string message = Console.ReadLine();
-                if (message.Equals("exit"))
+                LoginMenu();
+                string option = Console.ReadLine();
+                SendAndReceiveMessage(option);
+                switch (option)
                 {
-                    clientRunning = false;
-                }
-                else
-                {
-                    byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
-                    byte[] dataLength =
-                        BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
-                    try
-                    {
-                        // ENVIO AL SERVER
-                        networkDataHelper.Send(dataLength); // Envio el largo del mensaje parte fija)
-                        networkDataHelper.Send(data); // Envio el mensaje (parte variable)
-
-
-                        // RECIBO DEL SERVER
-                        byte[] responseDataLength = networkDataHelper.Receive(4);
-                        byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
-                        Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
-                    }
-                    catch (SocketException)
-                    {
-                        Console.WriteLine("Connection with the server has been interrupted");
+                    case "1":
+                        RegisterUser();
+                        break;
+                    case "2":
+                        //Login();
+                        break;
+                    case "3":
                         clientRunning = false;
-                    }
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
                 }
+
             }
 
             Console.WriteLine("Will Close Connection...");
