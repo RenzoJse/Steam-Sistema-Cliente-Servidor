@@ -2,12 +2,16 @@
 using System.Net;
 using System.Text;
 using Comunicacion;
+using Comunicacion.Dominio;
+using ServerApp.DataAccess;
 
 namespace ServerApp
 {
     internal class Program
     {
         static readonly SettingsManager settingsMngr = new SettingsManager();
+        static UserRepository userRepository = new UserRepository();
+        static readonly UserManager userManager = new UserManager();
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Server Application..");
@@ -50,6 +54,7 @@ namespace ServerApp
                         
                         networkDataHelper.Send(responseDataLength);
                         networkDataHelper.Send(responseData);
+                        
                     }
                     catch (SocketException)
                     {

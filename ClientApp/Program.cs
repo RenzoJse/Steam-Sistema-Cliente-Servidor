@@ -2,15 +2,17 @@
 using System.Net;
 using System.Text;
 using Comunicacion;
-using Comunicacion.Dominio;
+using ServerApp.Services;
 
 namespace ClientApp
 {
+
     internal class Program
     {
+        private static UserService _userService;
         static readonly SettingsManager settingsMngr = new SettingsManager();
-        static readonly UserManager userManager = new UserManager();
         static NetworkDataHelper networkDataHelper;
+        
         static bool clientRunning = false;
         
         private static void LoginMenu()
@@ -27,16 +29,20 @@ namespace ClientApp
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
 
-            var user = userManager.AuthenticateUser(username, password);
-            if (user != null)
+            try
             {
-                Console.WriteLine("Login successful!");
-                // Proceed with user session
+                _userService.RegisterUser(username, password);
+                Console.WriteLine("Te has registrado!");
             }
-            else
+            catch (SocketException)
             {
-                Console.WriteLine("Invalid username or password.");
+                Console.WriteLine("Algo salio mal");
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+
         }
         
         private static void SendAndReceiveMessage(string message)
