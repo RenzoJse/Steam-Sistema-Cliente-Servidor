@@ -9,7 +9,6 @@ namespace ClientApp
 
     internal class Program
     {
-        private static UserService _userService;
         static readonly SettingsManager settingsMngr = new SettingsManager();
         static NetworkDataHelper networkDataHelper;
         
@@ -28,21 +27,28 @@ namespace ClientApp
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
+            
+            SendMessage(username);
+            SendAndReceiveMessage(password);
+        }
 
+        private static void SendMessage(string message) // Con este metodo envias un mensaje al server sin recibir respuesta
+        {
+            byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
+            byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
             try
             {
-                _userService.RegisterUser(username, password);
-                Console.WriteLine("Te has registrado!");
+                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
+                networkDataHelper.Send(data); // Envio el mensaje (parte variable));
             }
             catch (SocketException)
             {
-                Console.WriteLine("Algo salio mal");
-            }
-            catch (Exception e)
+                Console.WriteLine("Connection with the server has been interrupted");
+                clientRunning = false;
+            } catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
             }
-
         }
         
         private static void SendAndReceiveMessage(string message)
@@ -64,6 +70,9 @@ namespace ClientApp
             {
                 Console.WriteLine("Connection with the server has been interrupted");
                 clientRunning = false;
+            }catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
             }
         }
         

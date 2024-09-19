@@ -25,7 +25,6 @@ namespace Comunicacion
 
             while (offset < size) 
             {
-
                 int enviados = _socket.Send(data, offset, size - offset, SocketFlags.None);
                 if (enviados == 0) 
                 {
@@ -33,9 +32,7 @@ namespace Comunicacion
                 
                 }
                 offset += enviados;
-            
             }
-        
         }
 
         public byte[] Receive(int largo) 
@@ -54,13 +51,8 @@ namespace Comunicacion
 
                 }
                 offset += recibidos;
-
             }
-
             return data;
-
-
         }
-
     }
 }
