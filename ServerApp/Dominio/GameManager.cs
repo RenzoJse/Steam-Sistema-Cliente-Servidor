@@ -3,23 +3,25 @@
     public class GameManager
     {
         private List<Game> Games = new List<Game>();
-
+        
         public GameManager()
         {
-            // Inicializa la lista de juegos con algunos datos de ejemplo
             Games.Add(new Game
             {
-                Name = "Game 1",
+                Name = "Fornite",
                 Genre = "Action",
                 Publisher = "Dev 1",
-                ReleaseDate = new DateTime(2020, 1, 1)
+                ReleaseDate = new DateTime(2020, 1, 1),
+                UnitsAvailable = 10,
+                Valoration = 8
             });
             Games.Add(new Game
             {
                 Name = "Game 2",
                 Genre = "Adventure",
                 Publisher = "Dev 2",
-                ReleaseDate = new DateTime(2021, 2, 2)
+                ReleaseDate = new DateTime(2021, 2, 2),
+                UnitsAvailable = 10
             });
         }
 

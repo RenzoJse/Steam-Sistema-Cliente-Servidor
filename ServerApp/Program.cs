@@ -103,6 +103,91 @@ namespace ServerApp
             }
         }
         
+        private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
+            Console.WriteLine("Database.ShowPublishedGames -Initiated");
+            Console.WriteLine("Database.ShowPublishedGames -Executing");
+                Console.WriteLine("Db");
+                StringBuilder response = new StringBuilder("Published games: ");
+                foreach (var game in connectedUser.PublishedGames)
+                {
+                    response.Append(game.Name).Append(", ");
+                }
+                if (response.Length > 0)
+                {
+                    response.Length -= 2;
+                }
+                SuccesfulResponse(response.ToString(), networkDataHelper);
+        }
+
+        private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
+            Console.WriteLine("Database.EditPublishedGame -Initiated");
+            Console.WriteLine("Database.EditPublishedGame -Executing");
+
+            byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
+            byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+            string gameName = Encoding.UTF8.GetString(gameNameData);
+
+            Game game = GameManager.GetGameByName(gameName);
+            if (game != null && connectedUser.PublishedGames.Contains(game))
+            {
+                byte[] fieldLength = networkDataHelper.Receive(largoDataLength);
+                byte[] fieldData = networkDataHelper.Receive(BitConverter.ToInt32(fieldLength));
+                string field = Encoding.UTF8.GetString(fieldData);
+
+                byte[] newValueLength = networkDataHelper.Receive(largoDataLength);
+                byte[] newValueData = networkDataHelper.Receive(BitConverter.ToInt32(newValueLength));
+                string newValue = Encoding.UTF8.GetString(newValueData);
+
+                switch (field.ToLower())
+                {
+                    case "title":
+                        game.Name = newValue;
+                        break;
+                    case "genre":
+                        game.Genre = newValue;
+                        break;
+                    case "release date":
+                        if (DateTime.TryParse(newValue, out DateTime newReleaseDate))
+                        {
+                            game.ReleaseDate = newReleaseDate;
+                        }
+                        else
+                        {
+                            throw new ArgumentException("Invalid date format.");
+                        }
+
+                        break;
+                    case "platform":
+                        game.Platform = newValue;
+                        break;
+                    case "publisher":
+                        game.Publisher = newValue;
+                        break;
+                    case "units available":
+                        if (int.TryParse(newValue, out int newUnitsAvailable))
+                        {
+                            game.UnitsAvailable = newUnitsAvailable;
+                        }
+                        else
+                        {
+                            throw new ArgumentException("Invalid number format.");
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentException("Invalid field.");
+                }
+
+                SuccesfulResponse("Game edited successfully", networkDataHelper);
+            }
+            else
+            {
+                throw new InvalidOperationException("Game not found or user is not the publisher.");
+            }
+        }
+        
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
         {
             byte[] responseData = Encoding.UTF8.GetBytes(message);
@@ -110,7 +195,7 @@ namespace ServerApp
             networkDataHelper.Send(responseDataLength);
             networkDataHelper.Send(responseData);
         } // Este metodo envia un mensaje de respuesta exitosa al cliente
-
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Server Application..");
@@ -215,6 +300,10 @@ namespace ServerApp
                                     break;
                                 case "2":
                                     program.ShowAllGameInformation(networkDataHelper);
+                                    break;
+                                case "6":
+                                    program.ShowPublishedGames(networkDataHelper, connectedUser);
+                                    program.EditPublishedGame(networkDataHelper, connectedUser);
                                     break;
                                 case "8":
                                     connectedUser = null;

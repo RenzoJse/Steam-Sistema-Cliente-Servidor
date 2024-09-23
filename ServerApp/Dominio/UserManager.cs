@@ -6,10 +6,27 @@ namespace Comunicacion.Dominio
     public class UserManager
     {
         private List<User> users = new List<User>();
+
         
         public UserManager()
         {
-            users.Add(new User { Username = "admin", Password = "admin", PurchasedGames = new List<Game>() });
+            var admin = new User 
+            { 
+                Username = "admin", 
+                Password = "admin", 
+                PublishedGames = new List<Game>(), 
+                PurchasedGames = new List<Game>() 
+            };
+            admin.PurchasedGames.Add(new Game
+            {
+                Name = "Fornite",
+                Genre = "Action",
+                Publisher = "Dev 1",
+                ReleaseDate = new DateTime(2020, 1, 1),
+                UnitsAvailable = 10,
+                Valoration = 8
+            });
+            users.Add(admin);
         }
         
         public bool RegisterUser(string username, string password)

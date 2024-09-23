@@ -216,13 +216,18 @@ namespace ClientApp
 
                     switch (option)
                     {
-                        case "1":
-                            PublishGame();
-                            break;
                         case "2":
                             Console.WriteLine("Game Name: ");
                             string gameName = Console.ReadLine();
                             SendAndReceiveMessage(gameName);
+                            break;
+                        case "5":
+                            PublishGame();
+                            break;
+                        case "6":
+                            Console.WriteLine("Game Name You Want To Modify: ");
+                            string gameName2 = Console.ReadLine();
+                            SendAndReceiveMessage(gameName2);
                             break;
                         case "8": //Logout
                             userConnected = false;
