@@ -111,7 +111,43 @@ namespace ServerApp
 
                         networkDataHelper.Send(responseDataLength);
                         networkDataHelper.Send(responseData);
-                        
+
+
+                        if (message == "PUBLICAR_JUEGO")
+                        {
+                            // Recibir datos del juego
+                            byte[] gameDataLength = networkDataHelper.Receive(largoDataLength);
+                            byte[] gameData = networkDataHelper.Receive(BitConverter.ToInt32(gameDataLength));
+                            string gameInfo = Encoding.UTF8.GetString(gameData);
+                            Console.WriteLine($"New game data: {gameInfo}");
+
+                            // Aquí deberías procesar los datos y guardarlos en la base de datos o en memoria
+                            // Suponiendo que los datos están separados por ";"
+                            string[] gameFields = gameInfo.Split(';');
+                            string titulo = gameFields[0];
+                            string genero = gameFields[1];
+                            string anoLanzamiento = gameFields[2];
+                            string plataforma = gameFields[3];
+                            string publicador = gameFields[4];
+                            string unidadesDisponibles = gameFields[5];
+                            string imagenCaratula = gameFields[6]; // Opcional
+
+                            // Procesa los datos y almacénalos (implementación personalizada)
+                            Console.WriteLine($"Game {titulo} has been published by {publicador}");
+
+                            // Envía respuesta exitosa al cliente
+                            string responsegame = "Game published successfully";
+                            byte[] responseDatagame = Encoding.UTF8.GetBytes(response);
+                            byte[] responseDataLengthgame = BitConverter.GetBytes(responseData.Length);
+                            networkDataHelper.Send(responseDataLengthgame);
+                            networkDataHelper.Send(responseDatagame);
+                        }
+                        else
+                        {
+                            // Otros casos...
+                        }
+                    
+
                         Console.WriteLine(message);
                         switch (message)
                         {

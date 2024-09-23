@@ -21,6 +21,42 @@ namespace ClientApp
             Console.WriteLine("3. Exit");
         }
 
+        private static void LoggedInMenu()
+        {
+            Console.WriteLine("1. Publicar un juego");
+            Console.WriteLine("2. Otras opciones...");
+            Console.WriteLine("3. Logout");
+        }
+
+        private static void PublishGame()
+        {
+            Console.Write("Ingrese el título del juego: ");
+            string titulo = Console.ReadLine();
+
+            Console.Write("Ingrese el género del juego: ");
+            string genero = Console.ReadLine();
+
+            Console.Write("Ingrese el año de lanzamiento: ");
+            string anoLanzamiento = Console.ReadLine();
+
+            Console.Write("Ingrese la plataforma: ");
+            string plataforma = Console.ReadLine();
+
+            Console.Write("Ingrese el publicador: ");
+            string publicador = Console.ReadLine();
+
+            Console.Write("Ingrese el precio: ");
+            string precio = Console.ReadLine();
+
+            // Crear un mensaje con los datos del juego
+            string gameData = $"{titulo};{genero};{anoLanzamiento};{plataforma};{publicador};{precio}";
+
+            // Enviar los datos al servidor
+            SendMessage("PUBLICAR_JUEGO");
+            SendAndReceiveMessage(gameData);
+        }
+
+
         private static void RegisterUser()
         {
             Console.Write("Enter username: ");
@@ -120,6 +156,25 @@ namespace ClientApp
                 }
 
             }
+
+            while (clientRunning)
+            {
+                LoggedInMenu();
+                string option = Console.ReadLine();
+                switch (option)
+                {
+                    case "1":
+                        PublishGame();
+                        break;
+                    case "3":
+                        clientRunning = false;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
+                }
+            }
+
 
             Console.WriteLine("Will Close Connection...");
             socketClient.Shutdown(SocketShutdown.Both);
