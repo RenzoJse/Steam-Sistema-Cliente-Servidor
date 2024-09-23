@@ -17,5 +17,10 @@ public class GameService
     {
        _gameRepository.AddGame(game);
     }
+    
+    public Game GetGameById(string gameName)
+    {
+        return _gameRepository.GetGameById(gameName);
+    }
 
 }

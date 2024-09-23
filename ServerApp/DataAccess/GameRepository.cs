@@ -26,4 +26,12 @@ public class GameRepository
         
     }
     
+    public Game GetGameById(string gameName)
+    {
+        lock (_lock)
+        {
+            return _games.FirstOrDefault(g => g.Name == gameName);
+        }
+    }
+    
 }

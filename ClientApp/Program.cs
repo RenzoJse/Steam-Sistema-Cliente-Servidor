@@ -23,9 +23,14 @@ namespace ClientApp
 
         private static void LoggedInMenu()
         {
-            Console.WriteLine("1. Publicar un juego");
-            Console.WriteLine("2. Otras opciones...");
-            Console.WriteLine("3. Logout");
+            Console.WriteLine("1. Search Games");
+            Console.WriteLine("2. More information about a game");
+            Console.WriteLine("3. Buy GAMES");
+            Console.WriteLine("4. Review Game");
+            Console.WriteLine("5. Publish a game");
+            Console.WriteLine("6. Modify Published Game");
+            Console.WriteLine("7. Delete Published Game");
+            Console.WriteLine("8. Logout");
         }
 
         private static void PublishGame()
@@ -67,6 +72,17 @@ namespace ClientApp
             SendMessage(username);
             SendAndReceiveMessage(password);
         }
+        
+        private static bool Login()
+        {
+            Console.Write("Enter username: ");
+            string username = Console.ReadLine();
+            Console.Write("Enter password: ");
+            string password = Console.ReadLine();
+            
+            SendMessage(username);
+            return SendAndReceiveMessageBool(password);
+        }
 
         private static void SendMessage(string message) // Con este metodo envias un mensaje al server sin recibir respuesta
         {
@@ -84,6 +100,36 @@ namespace ClientApp
             } catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
+            }
+        }
+        
+        private static bool SendAndReceiveMessageBool(string message)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
+            byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
+            try
+            {
+                // ENVIO AL SERVER
+                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
+                networkDataHelper.Send(data); // Envio el mensaje (parte variable)
+
+                // RECIBO DEL SERVER
+                byte[] responseDataLength = networkDataHelper.Receive(4);
+                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                string response = Encoding.UTF8.GetString(responseData);
+                Console.WriteLine($"Server says: {response}");
+                
+                return response == "Login successful";
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine("Connection with the server has been interrupted");
+                clientRunning = false;
+                return false;
+            }catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+                return false;
             }
         }
         
@@ -133,49 +179,61 @@ namespace ClientApp
             clientRunning = true;
 
             networkDataHelper = new NetworkDataHelper(socketClient);
-
+            
+            bool userConnected = false;
             while (clientRunning)
             {
-                LoginMenu();
-                string option = Console.ReadLine();
-                SendAndReceiveMessage(option);
-                switch (option)
+                if (!userConnected)
                 {
-                    case "1":
-                        RegisterUser();
-                        break;
-                    case "2":
-                        //Login();
-                        break;
-                    case "3":
-                        clientRunning = false;
-                        break;
-                    default:
-                        Console.WriteLine("Invalid option. Please try again.");
-                        break;
+                    LoginMenu();
+                    string option = Console.ReadLine();
+                    SendAndReceiveMessage(option);
+
+                    switch (option)
+                    {
+                        case "1":
+                            RegisterUser();
+                            break;
+                        case "2":
+                            if (Login())
+                            {
+                                userConnected = true;
+                            }
+                            break;
+                        case "3":
+                            clientRunning = false;
+                            break;
+                        default:
+                            Console.WriteLine("Invalid option. Please try again.");
+                            break;
+                    }
                 }
-
-            }
-
-            while (clientRunning)
-            {
-                LoggedInMenu();
-                string option = Console.ReadLine();
-                switch (option)
+                else
                 {
-                    case "1":
-                        PublishGame();
-                        break;
-                    case "3":
-                        clientRunning = false;
-                        break;
-                    default:
-                        Console.WriteLine("Invalid option. Please try again.");
-                        break;
+                    LoggedInMenu();
+                    string option = Console.ReadLine();
+                    SendAndReceiveMessage(option);
+
+                    switch (option)
+                    {
+                        case "1":
+                            PublishGame();
+                            break;
+                        case "2":
+                            Console.WriteLine("Game Name: ");
+                            string gameName = Console.ReadLine();
+                            SendAndReceiveMessage(gameName);
+                            break;
+                        case "8": //Logout
+                            userConnected = false;
+                            break;
+                        default:
+                            Console.WriteLine("Invalid option. Please try again.");
+                            break;
+                    }
                 }
+                
             }
-
-
             Console.WriteLine("Will Close Connection...");
             socketClient.Shutdown(SocketShutdown.Both);
             socketClient.Close();

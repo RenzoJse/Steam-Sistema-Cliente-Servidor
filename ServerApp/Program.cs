@@ -4,16 +4,18 @@ using System.Text;
 using Comunicacion;
 using Comunicacion.Dominio;
 using ServerApp.DataAccess;
+using ServerApp.Services;
 
 namespace ServerApp
 {
     internal class Program
     {
         static readonly SettingsManager settingsMngr = new SettingsManager();
-        static UserRepository userRepository = new UserRepository();
         static readonly UserManager userManager = new UserManager();
+        static readonly GameManager GameManager = new GameManager();
         const int largoDataLength = 4; // Pasar a una clase con constantes del protocolo
-
+        static bool serverRunning = true;
+        
         public static UserManager getInstance()
         {
             return userManager;
@@ -55,6 +57,52 @@ namespace ServerApp
             }
         }
         
+        private User LoginUser(NetworkDataHelper networkDataHelper)
+        {
+            byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
+            byte[] usernameData = networkDataHelper.Receive(BitConverter.ToInt32(usernameLength));
+            string username = Encoding.UTF8.GetString(usernameData);
+            byte[] passwordLength = networkDataHelper.Receive(largoDataLength);
+            byte[] passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
+            string password = Encoding.UTF8.GetString(passwordData);
+            
+            Console.WriteLine("Database.LoginUser -Initiated");
+            Console.WriteLine("Database.LoginUser -Executing");
+            User user = userManager.AuthenticateUser(username, password);
+            if (user != null)
+            {
+                SuccesfulResponse("Login successful", networkDataHelper);
+                Console.WriteLine("User " + user.Username + " has logged in.");
+                return user;
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid username or password.");
+            }
+
+            return null;
+        }
+
+        private void ShowAllGameInformation(NetworkDataHelper networkDataHelper)
+        {
+            Console.WriteLine("Database.ShowAllGameInformation -Initiated");
+            Console.WriteLine("Database.ShowAllGameInformation -Executing");
+            byte[] gameIdLength = networkDataHelper.Receive(largoDataLength);
+            byte[] gameIdData = networkDataHelper.Receive(BitConverter.ToInt32(gameIdLength));
+            string gameName = Encoding.UTF8.GetString(gameIdData);
+
+            Game game = GameManager.GetGameByName(gameName);
+            if (game != null)
+            {
+                string response = game.ToString();
+                SuccesfulResponse(response, networkDataHelper);
+            }
+            else
+            {
+                throw new InvalidOperationException("Game not found.");
+            }
+        }
+        
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
         {
             byte[] responseData = Encoding.UTF8.GetBytes(message);
@@ -75,23 +123,52 @@ namespace ServerApp
             socketServer.Bind(localEndpoint);
             socketServer.Listen(3); // Nuestro Socket pasa a estar en modo escucha
             Console.WriteLine("Waiting for clients...");
-            while (true)
+            // Hilo para manejar la entrada de la consola del servidor
+            
+            Console.WriteLine("Type 'shutdown' to close the server");
+            new Thread(() =>
             {
-                var programInstance = new Program();
-                Socket
-                    clientSocket =
-                        socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
-                Console.WriteLine("Client connected");
-                new Thread(() => HandleClient(clientSocket, programInstance))
-                    .Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                while (serverRunning)
+                {
+                    string command = Console.ReadLine();
+                    if (command == "shutdown")
+                    {
+                        serverRunning = false;
+                        socketServer.Close();
+                        Console.WriteLine("Server is shutting down...");
+                    }
+                }
+            }).Start();
+            
+            while (serverRunning)
+            {
+                try
+                {
+                    var programInstance = new Program();
+                    Socket clientSocket = socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                    Console.WriteLine("Client connected");
+                    new Thread(() => HandleClient(clientSocket, programInstance)).Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                }
+                catch (SocketException)
+                {
+                    if (!serverRunning)
+                    {
+                        Console.WriteLine("Server has been shut down.");
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
             }
 
             //HILO QUE MANEJA LOS CLIENTES
             static void HandleClient(Socket clientSocket, Program program)
             {
                 bool clientIsConnected = true;
+                User connectedUser = null;
                 NetworkDataHelper networkDataHelper = new NetworkDataHelper(clientSocket);
-                
+
                 while (clientIsConnected)
                 {
                     try
@@ -103,7 +180,7 @@ namespace ServerApp
                                 BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
                         Console.Write("Client says:");
                         string message = Encoding.UTF8.GetString(data);
-                        
+
                         string response = $"Message '{message}' received successfully";
 
                         byte[] responseData = Encoding.UTF8.GetBytes(response);
@@ -112,53 +189,38 @@ namespace ServerApp
                         networkDataHelper.Send(responseDataLength);
                         networkDataHelper.Send(responseData);
 
+                        Console.WriteLine(message);
 
-                        if (message == "PUBLICAR_JUEGO")
+                        if (connectedUser == null)
                         {
-                            // Recibir datos del juego
-                            byte[] gameDataLength = networkDataHelper.Receive(largoDataLength);
-                            byte[] gameData = networkDataHelper.Receive(BitConverter.ToInt32(gameDataLength));
-                            string gameInfo = Encoding.UTF8.GetString(gameData);
-                            Console.WriteLine($"New game data: {gameInfo}");
-
-                            // Aquí deberías procesar los datos y guardarlos en la base de datos o en memoria
-                            // Suponiendo que los datos están separados por ";"
-                            string[] gameFields = gameInfo.Split(';');
-                            string titulo = gameFields[0];
-                            string genero = gameFields[1];
-                            string anoLanzamiento = gameFields[2];
-                            string plataforma = gameFields[3];
-                            string publicador = gameFields[4];
-                            string unidadesDisponibles = gameFields[5];
-                            string imagenCaratula = gameFields[6]; // Opcional
-
-                            // Procesa los datos y almacénalos (implementación personalizada)
-                            Console.WriteLine($"Game {titulo} has been published by {publicador}");
-
-                            // Envía respuesta exitosa al cliente
-                            string responsegame = "Game published successfully";
-                            byte[] responseDatagame = Encoding.UTF8.GetBytes(response);
-                            byte[] responseDataLengthgame = BitConverter.GetBytes(responseData.Length);
-                            networkDataHelper.Send(responseDataLengthgame);
-                            networkDataHelper.Send(responseDatagame);
+                            switch (message)
+                            {
+                                case "1":
+                                    program.RegisterNewUser(networkDataHelper);
+                                    break;
+                                case "2":
+                                    connectedUser = program.LoginUser(networkDataHelper);
+                                    break;
+                                case "3":
+                                    clientIsConnected = false;
+                                    break;
+                            }
                         }
                         else
                         {
-                            // Otros casos...
+                            switch (message)
+                            {
+                                case "1":
+                                    program.RegisterNewUser(networkDataHelper);
+                                    break;
+                                case "2":
+                                    program.ShowAllGameInformation(networkDataHelper);
+                                    break;
+                                case "8":
+                                    connectedUser = null;
+                                    break;
+                            }
                         }
-                    
-
-                        Console.WriteLine(message);
-                        switch (message)
-                        {
-                            case "1":
-                                program.RegisterNewUser(networkDataHelper);
-                                break;
-                            case "2":
-                                Console.WriteLine("Aun no hecho");
-                                break;
-                        }
-                        
                     }
                     catch (SocketException)
                     {
