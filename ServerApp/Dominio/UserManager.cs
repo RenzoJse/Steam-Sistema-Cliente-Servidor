@@ -52,5 +52,26 @@ namespace Comunicacion.Dominio
             return null;
         }
         
+        public bool PurchaseGame(Game game, User user)
+        {
+            if (game is null || user is null)
+            {
+                return false;
+            }
+
+            User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
+
+            if (activeUser is null) //si el usuario no existe
+            {
+                return false;
+            } 
+            else if (activeUser.PurchasedGames.Any(g => g.Name == game.Name)) //si el juego ya lo tiene comprado 
+            {
+                return false;
+            }
+
+            activeUser.PurchasedGames.Add(game);
+            return true;
+        }
     }
 }

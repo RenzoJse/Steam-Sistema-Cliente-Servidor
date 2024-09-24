@@ -221,6 +221,11 @@ namespace ClientApp
                             string gameName = Console.ReadLine();
                             SendAndReceiveMessage(gameName);
                             break;
+                        case "3":
+                            Console.WriteLine("Titulo del juego a comprar: ");
+                            string gamePurchase = Console.ReadLine();
+                            SendAndReceiveMessage(gamePurchase);
+                            break;
                         case "5":
                             PublishGame();
                             break;

@@ -187,6 +187,40 @@ namespace ServerApp
                 throw new InvalidOperationException("Game not found or user is not the publisher.");
             }
         }
+
+        private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
+            lock (this)
+            {
+                byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
+                byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+                string gameName = Encoding.UTF8.GetString(gameNameData);
+
+                Game game = GameManager.GetGameByName(gameName);
+
+                if (game == null)
+                {
+                    throw new InvalidOperationException("El juego no existe.");
+                }
+                else if (game.UnitsAvailable <= 0)
+                {
+                    throw new InvalidOperationException("No hay unidades disponibles.");
+                }
+
+                Console.WriteLine("Database.PurchaseGame -Initiated");
+                Console.WriteLine("Database.PurchaseGame -Executing");
+                if (userManager.PurchaseGame(game, connectedUser))
+                {
+                    GameManager.DiscountPurchasedGame(game);
+                    Console.WriteLine("Database.PurchaseGame - El juego: " + game.Name + " ha sido comprado");
+                    SuccesfulResponse("Juego comprado exitosamente", networkDataHelper);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Error al comprar el juego.");
+                }
+            }
+        }
         
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
         {
@@ -300,6 +334,9 @@ namespace ServerApp
                                     break;
                                 case "2":
                                     program.ShowAllGameInformation(networkDataHelper);
+                                    break;
+                                case "3":
+                                    program.PurchaseGame(networkDataHelper, connectedUser);
                                     break;
                                 case "6":
                                     program.ShowPublishedGames(networkDataHelper, connectedUser);
