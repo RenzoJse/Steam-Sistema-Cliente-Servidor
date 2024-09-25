@@ -48,5 +48,13 @@
                 Games.Remove(game);
             }
         }
+
+        public void DiscountPurchasedGame(Game game) 
+        { 
+            Game gamePurchased = Games.FirstOrDefault(g=> g.Name == game.Name);
+
+            if (gamePurchased != null)
+                gamePurchased.UnitsAvailable--;
+        }
     }
 }

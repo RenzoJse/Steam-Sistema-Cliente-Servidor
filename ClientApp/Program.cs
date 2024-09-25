@@ -91,6 +91,11 @@ namespace ClientApp
             return SendAndReceiveMessageBool(password);
         }
 
+        private static bool HavePublishedGames(string message)
+        {
+            return SendAndReceiveMessageBool(message);
+        }
+        
         private static void SendMessage(string message) // Con este metodo envias un mensaje al server sin recibir respuesta
         {
             byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
@@ -126,7 +131,7 @@ namespace ClientApp
                 string response = Encoding.UTF8.GetString(responseData);
                 Console.WriteLine($"Server says: {response}");
                 
-                return response == "Login successful";
+                return response is "Login successful" or "True";
             }
             catch (SocketException)
             {
@@ -228,13 +233,21 @@ namespace ClientApp
                             string gameName = Console.ReadLine();
                             SendAndReceiveMessage(gameName);
                             break;
+                        case "3":
+                            Console.WriteLine("Titulo del juego a comprar: ");
+                            string gamePurchase = Console.ReadLine();
+                            SendAndReceiveMessage(gamePurchase);
+                            break;
                         case "5":
                             PublishGame();
                             break;
                         case "6":
-                            Console.WriteLine("Game Name You Want To Modify: ");
-                            string gameName2 = Console.ReadLine();
-                            SendAndReceiveMessage(gameName2);
+                            if (HavePublishedGames(option))
+                            {
+                                Console.WriteLine("Game Name You Want To Modify: ");
+                                string gameName2 = Console.ReadLine();
+                                SendAndReceiveMessage(gameName2);
+                            }
                             break;
                         case "8": //Logout
                             userConnected = false;
