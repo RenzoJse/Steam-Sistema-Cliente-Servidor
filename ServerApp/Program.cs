@@ -102,7 +102,68 @@ namespace ServerApp
                 throw new InvalidOperationException("Game not found.");
             }
         }
-        
+
+
+        private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
+            Console.WriteLine("Database.PublishGame -Initiated");
+            Console.WriteLine("Database.PublishGame -Executing");
+
+            // Recibimos los datos del juego
+            byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
+            byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+            string gameName = Encoding.UTF8.GetString(gameNameData);
+
+            byte[] genreLength = networkDataHelper.Receive(largoDataLength);
+            byte[] genreData = networkDataHelper.Receive(BitConverter.ToInt32(genreLength));
+            string genre = Encoding.UTF8.GetString(genreData);
+
+            byte[] releaseDateLength = networkDataHelper.Receive(largoDataLength);
+            byte[] releaseDateData = networkDataHelper.Receive(BitConverter.ToInt32(releaseDateLength));
+            DateTime releaseDate = DateTime.Parse(Encoding.UTF8.GetString(releaseDateData));
+
+            byte[] platformLength = networkDataHelper.Receive(largoDataLength);
+            byte[] platformData = networkDataHelper.Receive(BitConverter.ToInt32(platformLength));
+            string platform = Encoding.UTF8.GetString(platformData);
+
+            byte[] publisherLength = networkDataHelper.Receive(largoDataLength);
+            byte[] publisherData = networkDataHelper.Receive(BitConverter.ToInt32(publisherLength));
+            string publisher = Encoding.UTF8.GetString(publisherData);
+
+            byte[] unitsAvailableLength = networkDataHelper.Receive(largoDataLength);
+            byte[] unitsAvailableData = networkDataHelper.Receive(BitConverter.ToInt32(unitsAvailableLength));
+            int unitsAvailable = BitConverter.ToInt32(unitsAvailableData);
+
+            byte[] priceLength = networkDataHelper.Receive(largoDataLength);
+            byte[] priceData = networkDataHelper.Receive(BitConverter.ToInt32(priceLength));
+            int price = BitConverter.ToInt32(priceData);
+
+            byte[] valorationLength = networkDataHelper.Receive(largoDataLength);
+            byte[] valorationData = networkDataHelper.Receive(BitConverter.ToInt32(valorationLength));
+            int valoration = BitConverter.ToInt32(valorationData);
+
+            // Creamos el nuevo juego
+            Game newGame = new Game
+            {
+                Name = gameName,
+                Genre = genre,
+                ReleaseDate = releaseDate,
+                Platform = platform,
+                Publisher = publisher,
+                UnitsAvailable = unitsAvailable,
+                Price = price,
+                Valoration = valoration,
+                Owner = connectedUser
+            };
+
+            // Publicamos el juego usando el GameManager
+            GameManager.AddGame(newGame);
+
+            SuccesfulResponse("Game published successfully", networkDataHelper);
+        }
+
+
+
         private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             Console.WriteLine("Database.ShowPublishedGames -Initiated");
@@ -300,6 +361,9 @@ namespace ServerApp
                                     break;
                                 case "2":
                                     program.ShowAllGameInformation(networkDataHelper);
+                                    break;
+                                case "5":
+                                    program.PublishGame(networkDataHelper, connectedUser);
                                     break;
                                 case "6":
                                     program.ShowPublishedGames(networkDataHelper, connectedUser);

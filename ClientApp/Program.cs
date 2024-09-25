@@ -41,8 +41,8 @@ namespace ClientApp
             Console.Write("Ingrese el género del juego: ");
             string genero = Console.ReadLine();
 
-            Console.Write("Ingrese el año de lanzamiento: ");
-            string anoLanzamiento = Console.ReadLine();
+            Console.Write("Ingrese la fecha de lanzamiento (dd/mm/yyyy): ");
+            string fechaLanzamiento = Console.ReadLine();
 
             Console.Write("Ingrese la plataforma: ");
             string plataforma = Console.ReadLine();
@@ -50,16 +50,23 @@ namespace ClientApp
             Console.Write("Ingrese el publicador: ");
             string publicador = Console.ReadLine();
 
+            Console.Write("Ingrese la cantidad de unidades disponibles: ");
+            string unidadesDisponibles = Console.ReadLine();
+
             Console.Write("Ingrese el precio: ");
             string precio = Console.ReadLine();
 
+            Console.Write("Ingrese la valoración: ");
+            string valoracion = Console.ReadLine();
+
             // Crear un mensaje con los datos del juego
-            string gameData = $"{titulo};{genero};{anoLanzamiento};{plataforma};{publicador};{precio}";
+            string gameData = $"{titulo};{genero};{fechaLanzamiento};{plataforma};{publicador};{unidadesDisponibles};{precio};{valoracion}";
 
             // Enviar los datos al servidor
             SendMessage("PUBLICAR_JUEGO");
             SendAndReceiveMessage(gameData);
         }
+
 
 
         private static void RegisterUser()
