@@ -56,5 +56,10 @@
             if (gamePurchased != null)
                 gamePurchased.UnitsAvailable--;
         }
+
+        public bool DoesGameExist(string name)
+        {
+            return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
     }
 }

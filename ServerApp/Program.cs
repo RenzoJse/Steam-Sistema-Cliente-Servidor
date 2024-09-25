@@ -114,6 +114,10 @@ namespace ServerApp
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
+            if (GameManager.GetGameByName(gameName) != null)
+            {
+                throw new InvalidOperationException("Game already exists.");
+            }
 
             byte[] genreLength = networkDataHelper.Receive(largoDataLength);
             byte[] genreData = networkDataHelper.Receive(BitConverter.ToInt32(genreLength));
@@ -127,21 +131,23 @@ namespace ServerApp
             byte[] platformData = networkDataHelper.Receive(BitConverter.ToInt32(platformLength));
             string platform = Encoding.UTF8.GetString(platformData);
 
-            byte[] publisherLength = networkDataHelper.Receive(largoDataLength);
-            byte[] publisherData = networkDataHelper.Receive(BitConverter.ToInt32(publisherLength));
-            string publisher = Encoding.UTF8.GetString(publisherData);
-
+  
             byte[] unitsAvailableLength = networkDataHelper.Receive(largoDataLength);
             byte[] unitsAvailableData = networkDataHelper.Receive(BitConverter.ToInt32(unitsAvailableLength));
-            int unitsAvailable = BitConverter.ToInt32(unitsAvailableData);
+            string unitsAvailableString = Encoding.UTF8.GetString(unitsAvailableData);
+
+            int unitsAvailable = int.Parse(unitsAvailableString);
+
 
             byte[] priceLength = networkDataHelper.Receive(largoDataLength);
             byte[] priceData = networkDataHelper.Receive(BitConverter.ToInt32(priceLength));
-            int price = BitConverter.ToInt32(priceData);
+            string priceString = Encoding.UTF8.GetString(priceData);
+            int price = int.Parse(priceString);
 
             byte[] valorationLength = networkDataHelper.Receive(largoDataLength);
             byte[] valorationData = networkDataHelper.Receive(BitConverter.ToInt32(valorationLength));
-            int valoration = BitConverter.ToInt32(valorationData);
+            string valorationString = Encoding.UTF8.GetString(valorationData);
+            int valoration = int.Parse(valorationString);
 
             // Creamos el nuevo juego
             Game newGame = new Game
@@ -150,7 +156,7 @@ namespace ServerApp
                 Genre = genre,
                 ReleaseDate = releaseDate,
                 Platform = platform,
-                Publisher = publisher,
+                Publisher = connectedUser.Username,
                 UnitsAvailable = unitsAvailable,
                 Price = price,
                 Valoration = valoration,
@@ -400,6 +406,9 @@ namespace ServerApp
                                     break;
                                 case "3":
                                     program.PurchaseGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "5":
+                                    program.PublishGame(networkDataHelper, connectedUser);
                                     break;
                                 case "6":
                                     if (connectedUser.PublishedGames.Count == 0)

@@ -35,36 +35,56 @@ namespace ClientApp
 
         private static void PublishGame()
         {
-            Console.Write("Ingrese el título del juego: ");
-            string titulo = Console.ReadLine();
+            bool nameIsValid = false;
+
+            while (!nameIsValid)
+            {
+                Console.Write("Ingrese el título del juego: ");
+                string titulo = Console.ReadLine();
+                SendMessage(titulo);
+
+                // Recibir la respuesta del servidor
+                byte[] responseLength = networkDataHelper.Receive(4);
+                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseLength));
+                string serverResponse = Encoding.UTF8.GetString(responseData);
+
+                if (serverResponse.Contains("El juego ya existe"))
+                {
+                    Console.WriteLine("Server says: " + serverResponse);
+                }
+                else
+                {
+                    nameIsValid = true; // El nombre del juego es válido
+                }
+            }
+
 
             Console.Write("Ingrese el género del juego: ");
             string genero = Console.ReadLine();
+            SendMessage(genero);
 
             Console.Write("Ingrese la fecha de lanzamiento (dd/mm/yyyy): ");
             string fechaLanzamiento = Console.ReadLine();
+            SendMessage(fechaLanzamiento);
 
             Console.Write("Ingrese la plataforma: ");
             string plataforma = Console.ReadLine();
-
-            Console.Write("Ingrese el publicador: ");
-            string publicador = Console.ReadLine();
+            SendMessage(plataforma);
 
             Console.Write("Ingrese la cantidad de unidades disponibles: ");
             string unidadesDisponibles = Console.ReadLine();
+            SendMessage(unidadesDisponibles);
 
             Console.Write("Ingrese el precio: ");
             string precio = Console.ReadLine();
+            SendMessage(precio);
 
             Console.Write("Ingrese la valoración: ");
             string valoracion = Console.ReadLine();
+            SendMessage(valoracion);
+           
 
-            // Crear un mensaje con los datos del juego
-            string gameData = $"{titulo};{genero};{fechaLanzamiento};{plataforma};{publicador};{unidadesDisponibles};{precio};{valoracion}";
-
-            // Enviar los datos al servidor
-            SendMessage("PUBLICAR_JUEGO");
-            SendAndReceiveMessage(gameData);
+            
         }
 
 
