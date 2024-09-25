@@ -35,29 +35,9 @@ namespace ClientApp
 
         private static void PublishGame()
         {
-            bool nameIsValid = false;
-
-            while (!nameIsValid)
-            {
-                Console.Write("Ingrese el título del juego: ");
-                string titulo = Console.ReadLine();
-                SendMessage(titulo);
-
-                // Recibir la respuesta del servidor
-                byte[] responseLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseLength));
-                string serverResponse = Encoding.UTF8.GetString(responseData);
-
-                if (serverResponse.Contains("El juego ya existe"))
-                {
-                    Console.WriteLine("Server says: " + serverResponse);
-                }
-                else
-                {
-                    nameIsValid = true; // El nombre del juego es válido
-                }
-            }
-
+            Console.Write("Ingrese el título del juego: ");
+            string titulo = Console.ReadLine();
+            SendMessage(titulo);
 
             Console.Write("Ingrese el género del juego: ");
             string genero = Console.ReadLine();
@@ -82,9 +62,9 @@ namespace ClientApp
             Console.Write("Ingrese la valoración: ");
             string valoracion = Console.ReadLine();
             SendMessage(valoracion);
-           
 
-            
+            Console.WriteLine("Juego publicado exitosamente.");
+
         }
 
 
@@ -164,7 +144,20 @@ namespace ClientApp
                 return false;
             }
         }
-        
+
+        private static void DeleteGame()
+        {
+            
+            Console.Write("Ingrese el nombre del juego a borrar: ");
+            string gameName = Console.ReadLine();
+
+            
+            SendMessage(gameName);
+
+           
+        }
+
+
         private static void SendAndReceiveMessage(string message)
         {
             byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
@@ -268,6 +261,9 @@ namespace ClientApp
                                 string gameName2 = Console.ReadLine();
                                 SendAndReceiveMessage(gameName2);
                             }
+                            break;
+                        case "7":
+                            DeleteGame();
                             break;
                         case "8": //Logout
                             userConnected = false;

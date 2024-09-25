@@ -114,9 +114,11 @@ namespace ServerApp
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
-            if (GameManager.GetGameByName(gameName) != null)
+            if (GameManager.DoesGameExist(gameName))
             {
-                throw new InvalidOperationException("Game already exists.");
+                
+                SuccesfulResponse("Game already exists. Returning to menu.", networkDataHelper);
+                return;  
             }
 
             byte[] genreLength = networkDataHelper.Receive(largoDataLength);
@@ -163,12 +165,30 @@ namespace ServerApp
                 Owner = connectedUser
             };
 
-            // Publicamos el juego usando el GameManager
+            
             GameManager.AddGame(newGame);
 
-            SuccesfulResponse("Game published successfully", networkDataHelper);
+           
         }
 
+        private void DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
+            
+            byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
+            byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+            string gameName = Encoding.UTF8.GetString(gameNameData);
+
+           
+            if (GameManager.DoesGameExist(gameName))
+            {
+                GameManager.RemoveGame(gameName);
+                SuccesfulResponse("Game deleted successfully.", networkDataHelper);
+            }
+            else
+            {
+                SuccesfulResponse("Game not found.", networkDataHelper);
+            }
+        }
 
 
         private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
@@ -424,6 +444,9 @@ namespace ServerApp
                                         program.ShowPublishedGames(networkDataHelper, connectedUser);
                                         program.EditPublishedGame(networkDataHelper, connectedUser);  
                                     }
+                                    break;
+                                case "7":
+                                    program.DeleteGame(networkDataHelper, connectedUser);
                                     break;
                                 case "8":
                                     connectedUser = null;

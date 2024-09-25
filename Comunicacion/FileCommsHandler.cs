@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Comunicacion;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -12,14 +13,14 @@ namespace Communication
         private readonly ConversionHandler _conversionHandler;
         private readonly FileHandler _fileHandler;
         private readonly FileStreamHandler _fileStreamHandler;
-        private readonly SocketHelper _socketHelper;
+        private readonly NetworkDataHelper _socketHelper;
 
         public FileCommsHandler(Socket socket)
         {
             _conversionHandler = new ConversionHandler();
             _fileHandler = new FileHandler();
             _fileStreamHandler = new FileStreamHandler();
-            _socketHelper = new SocketHelper(socket);
+            _socketHelper = new NetworkDataHelper(socket);
         }
 
         public void SendFile(string path)
