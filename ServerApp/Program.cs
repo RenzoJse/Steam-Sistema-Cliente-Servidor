@@ -13,8 +13,10 @@ namespace ServerApp
         static readonly SettingsManager settingsMngr = new SettingsManager();
         static readonly UserManager userManager = new UserManager();
         static readonly GameManager GameManager = new GameManager();
+        static List<Socket> clientSockets = new List<Socket>();
         const int largoDataLength = 4; // Pasar a una clase con constantes del protocolo
         static bool serverRunning = true;
+        private static object _lock = new object();
         
         public static UserManager getInstance()
         {
@@ -23,38 +25,33 @@ namespace ServerApp
 
         private void RegisterNewUser(NetworkDataHelper networkDataHelper)
         {
-            lock (this)
-            {
-                byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
-                byte[] usernameData = networkDataHelper.Receive(BitConverter.ToInt32(usernameLength));
-                string username = Encoding.UTF8.GetString(usernameData);
-                
+            byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
+            byte[] usernameData = networkDataHelper.Receive(BitConverter.ToInt32(usernameLength));
+            string username = Encoding.UTF8.GetString(usernameData);
 
-                
-                byte[] passwordLength = networkDataHelper.Receive(largoDataLength);
-                byte[] passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
-                string password = Encoding.UTF8.GetString(passwordData);
-                                
-                if (password.Length < 4)
-                {
-                    throw new ArgumentException("Password must be at least 4 characters long.");
-                }
-                else if (username.Length < 4)
-                {
-                    throw new ArgumentException("Username must be at least 4 characters long.");
-                }
-                
-                Console.WriteLine("Database.RegisterNewUser -Initiated");
-                Console.WriteLine("Database.RegisterNewUser -Executing");
-                if (userManager.RegisterUser(username, password))
-                {
-                    Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
-                    SuccesfulResponse("User registered successfully", networkDataHelper);
-                }
-                else
-                {
-                    throw new InvalidOperationException("User already exists.");
-                }
+            byte[] passwordLength = networkDataHelper.Receive(largoDataLength);
+            byte[] passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
+            string password = Encoding.UTF8.GetString(passwordData);
+
+            if (password.Length < 4)
+            {
+                throw new ArgumentException("Password must be at least 4 characters long.");
+            }
+            else if (username.Length < 4)
+            {
+                throw new ArgumentException("Username must be at least 4 characters long.");
+            }
+
+            Console.WriteLine("Database.RegisterNewUser -Initiated");
+            Console.WriteLine("Database.RegisterNewUser -Executing");
+            if (userManager.RegisterUser(username, password))
+            {
+                Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
+                SuccesfulResponse("User registered successfully", networkDataHelper);
+            }
+            else
+            {
+                throw new InvalidOperationException("User already exists.");
             }
         }
         
@@ -265,19 +262,20 @@ namespace ServerApp
             socketServer.Listen(3); // Nuestro Socket pasa a estar en modo escucha
             Console.WriteLine("Waiting for clients...");
             // Hilo para manejar la entrada de la consola del servidor
-            
+
             Console.WriteLine("Type 'shutdown' to close the server");
             new Thread(() =>
             {
-                while (serverRunning)
+                string command = Console.ReadLine();
+                if (command == "shutdown")
                 {
-                    string command = Console.ReadLine();
-                    if (command == "shutdown")
+                    foreach (var client in clientSockets)
                     {
-                        serverRunning = false;
-                        socketServer.Close();
-                        Console.WriteLine("Server is shutting down...");
+                        client.Close();
                     }
+                    socketServer.Close();
+                    serverRunning = false;
+                    Console.WriteLine("Server is shutting down...");
                 }
             }).Start();
             
@@ -287,19 +285,13 @@ namespace ServerApp
                 {
                     var programInstance = new Program();
                     Socket clientSocket = socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                    clientSockets.Add(clientSocket);
                     Console.WriteLine("Client connected");
                     new Thread(() => HandleClient(clientSocket, programInstance)).Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
                 }
-                catch (SocketException)
+                catch (Exception ex)
                 {
-                    if (!serverRunning)
-                    {
-                        Console.WriteLine("Server has been shut down.");
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    Console.WriteLine("Server has been shut down.");
                 }
             }
 
