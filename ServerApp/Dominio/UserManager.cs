@@ -6,16 +6,16 @@ namespace Comunicacion.Dominio
     public class UserManager
     {
         private List<User> users = new List<User>();
+        private static object _lock = new object();
 
-        
         public UserManager()
         {
-            var admin = new User 
-            { 
-                Username = "admin", 
-                Password = "admin", 
-                PublishedGames = new List<Game>(), 
-                PurchasedGames = new List<Game>() 
+            var admin = new User
+            {
+                Username = "admin",
+                Password = "admin",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
             };
             admin.PurchasedGames.Add(new Game
             {
@@ -28,50 +28,60 @@ namespace Comunicacion.Dominio
             });
             users.Add(admin);
         }
-        
-        public bool RegisterUser(string username, string password)
+
+        public bool RegisterUser(string username, string password) //ARREGLAR
         {
-            if (users.Any(u => u.Username == username))
+            lock (_lock)
             {
-                return false; // Username already exists
-            }else
-            {
-                users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>() });
-                return true;
+                if (users.Any(u => u.Username == username))
+                {
+                    return false; // Username already exists
+                }
+                else
+                {
+                    users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>() });
+                    return true;
+                }
             }
         }
 
         public User AuthenticateUser(string username, string password)
         {
-            var user = users.FirstOrDefault(u => u.Username == username);
-            if (user != null && user.ValidatePassword(password))
+            lock (_lock)
             {
-                return user;
-            }
+                var user = users.FirstOrDefault(u => u.Username == username);
+                if (user != null && user.ValidatePassword(password))
+                {
+                    return user;
+                }
 
-            return null;
+                return null;
+            }
         }
-        
+
         public bool PurchaseGame(Game game, User user)
         {
-            if (game is null || user is null)
+            lock (_lock)
             {
-                return false;
+                if (game is null || user is null)
+                {
+                    return false;
+                }
+
+                User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
+
+                if (activeUser is null) //si el usuario no existe
+                {
+                    return false;
+                }
+                else if (activeUser.PurchasedGames.Any(g => g.Name == game.Name)) //si el juego ya lo tiene comprado 
+                {
+                    return false;
+                }
+
+                activeUser.PurchasedGames.Add(game);
+                return true;
             }
-
-            User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
-
-            if (activeUser is null) //si el usuario no existe
-            {
-                return false;
-            } 
-            else if (activeUser.PurchasedGames.Any(g => g.Name == game.Name)) //si el juego ya lo tiene comprado 
-            {
-                return false;
-            }
-
-            activeUser.PurchasedGames.Add(game);
-            return true;
         }
     }
 }

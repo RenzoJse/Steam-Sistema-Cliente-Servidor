@@ -214,6 +214,11 @@ namespace ClientApp
                     string option = Console.ReadLine();
                     SendAndReceiveMessage(option);
 
+                    if (!clientRunning) 
+                    {
+                        break;
+                    }
+                    
                     switch (option)
                     {
                         case "1":
