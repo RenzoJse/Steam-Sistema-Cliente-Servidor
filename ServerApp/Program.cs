@@ -372,13 +372,10 @@ namespace ServerApp
                 try
                 {
                     var programInstance = new Program();
-                    Socket
-                        clientSocket =
-                            socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                    Socket clientSocket = socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
                     clientSockets.Add(clientSocket);
                     Console.WriteLine("Client connected");
-                    new Thread(() => HandleClient(clientSocket, programInstance))
-                        .Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                    new Thread(() => HandleClient(clientSocket, programInstance)).Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
                 }
                 catch (Exception ex)
                 {
@@ -399,8 +396,7 @@ namespace ServerApp
                     {
                         while (connectedUser == null)
                         {
-                            string message = protocolMessage(networkDataHelper);
-                            switch (message)
+                            switch (protocolMessage(networkDataHelper))
                             {
                                 case "1":
                                     program.RegisterNewUser(networkDataHelper);
@@ -413,11 +409,9 @@ namespace ServerApp
                                     break;
                             }
                         }
-
                         while (connectedUser != null)
                         {
-                            string message = protocolMessage(networkDataHelper);
-                            switch (message)
+                            switch (protocolMessage(networkDataHelper))
                             {
                                 case "1":
                                     program.ShowAllGames(networkDataHelper);
@@ -430,6 +424,27 @@ namespace ServerApp
                                     break;
                                 case "5":
                                     program.PublishGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "6":
+                                    if (connectedUser.PublishedGames.Count == 0)
+                                    {
+                                        string response = $"You Dont Own Any Game.";
+                                        byte[] responseData = Encoding.UTF8.GetBytes(response);
+                                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
+                                        networkDataHelper.Send(responseDataLength);
+                                        networkDataHelper.Send(responseData);
+                                    }
+                                    else
+                                    {
+                                        program.ShowPublishedGames(networkDataHelper, connectedUser);
+                                        program.EditPublishedGame(networkDataHelper, connectedUser);  
+                                    }
+                                    break;
+                                case "7":
+                                    program.DeleteGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "8":
+                                    connectedUser = null;
                                     break;
                             }
                         }
