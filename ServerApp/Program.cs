@@ -124,6 +124,7 @@ namespace ServerApp
             Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
                 connectedUser);
             GameManager.AddGame(newGame);
+            connectedUser.PublishedGames.Add(newGame);
         }
 
         private string ReceiveStringData(NetworkDataHelper networkDataHelper)
@@ -146,7 +147,6 @@ namespace ServerApp
                 UnitsAvailable = unitsAvailable,
                 Price = price,
                 Valoration = valoration,
-                Owner = owner
             };
         }
 
@@ -182,7 +182,7 @@ namespace ServerApp
             StringBuilder response = new StringBuilder("All games:\n");
             foreach (var game in games)
             {
-                response.Append(game.Name).Append("\n ");
+                response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
             }
 
             SuccesfulResponse(response.ToString(), networkDataHelper);

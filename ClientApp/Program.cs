@@ -178,6 +178,25 @@ namespace ClientApp
             }
         }
         
+        private static void ReceiveMessage(string message)
+        {
+            try
+            {
+                // RECIBO DEL SERVER
+                byte[] responseDataLength = networkDataHelper.Receive(4);
+                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine("Connection with the server has been interrupted");
+                clientRunning = false;
+            }catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+        }
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Client Application..");
@@ -242,7 +261,7 @@ namespace ClientApp
                     switch (option)
                     {
                         case "1":
-                            SendAndReceiveMessage("Hola");
+                            ReceiveMessage("ShowMeAllGames");
                             break;
                         case "2":
                             Console.WriteLine("Game Name: ");

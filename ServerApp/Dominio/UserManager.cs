@@ -39,7 +39,7 @@ namespace Comunicacion.Dominio
                 }
                 else
                 {
-                    users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>() });
+                    users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>(), PublishedGames = new List<Game>()});
                     return true;
                 }
             }
