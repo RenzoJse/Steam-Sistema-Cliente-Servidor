@@ -29,7 +29,7 @@ namespace Comunicacion.Dominio
             users.Add(admin);
         }
 
-        public bool RegisterUser(string username, string password) //ARREGLAR
+        public bool RegisterUser(string username, string password)
         {
             lock (_lock)
             {

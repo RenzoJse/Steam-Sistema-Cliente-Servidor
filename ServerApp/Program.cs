@@ -17,7 +17,7 @@ namespace ServerApp
         const int largoDataLength = 4; // Pasar a una clase con constantes del protocolo
         static bool serverRunning = true;
         private static object _lock = new object();
-        
+
         public static UserManager getInstance()
         {
             return userManager;
@@ -54,7 +54,7 @@ namespace ServerApp
                 throw new InvalidOperationException("User already exists.");
             }
         }
-        
+
         private User LoginUser(NetworkDataHelper networkDataHelper)
         {
             byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
@@ -63,7 +63,7 @@ namespace ServerApp
             byte[] passwordLength = networkDataHelper.Receive(largoDataLength);
             byte[] passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
             string password = Encoding.UTF8.GetString(passwordData);
-            
+
             Console.WriteLine("Database.LoginUser -Initiated");
             Console.WriteLine("Database.LoginUser -Executing");
             User user = userManager.AuthenticateUser(username, password);
@@ -107,75 +107,56 @@ namespace ServerApp
             Console.WriteLine("Database.PublishGame -Initiated");
             Console.WriteLine("Database.PublishGame -Executing");
 
-            // Recibimos los datos del juego
-            byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
-            byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
-            string gameName = Encoding.UTF8.GetString(gameNameData);
+            string gameName = ReceiveStringData(networkDataHelper);
             if (GameManager.DoesGameExist(gameName))
             {
-                
                 SuccesfulResponse("Game already exists. Returning to menu.", networkDataHelper);
-                return;  
+                return;
             }
 
-            byte[] genreLength = networkDataHelper.Receive(largoDataLength);
-            byte[] genreData = networkDataHelper.Receive(BitConverter.ToInt32(genreLength));
-            string genre = Encoding.UTF8.GetString(genreData);
+            string genre = ReceiveStringData(networkDataHelper);
+            DateTime releaseDate = DateTime.Parse(ReceiveStringData(networkDataHelper));
+            string platform = ReceiveStringData(networkDataHelper);
+            int unitsAvailable = int.Parse(ReceiveStringData(networkDataHelper));
+            int price = int.Parse(ReceiveStringData(networkDataHelper));
+            int valoration = int.Parse(ReceiveStringData(networkDataHelper));
 
-            byte[] releaseDateLength = networkDataHelper.Receive(largoDataLength);
-            byte[] releaseDateData = networkDataHelper.Receive(BitConverter.ToInt32(releaseDateLength));
-            DateTime releaseDate = DateTime.Parse(Encoding.UTF8.GetString(releaseDateData));
+            Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
+                connectedUser);
+            GameManager.AddGame(newGame);
+        }
 
-            byte[] platformLength = networkDataHelper.Receive(largoDataLength);
-            byte[] platformData = networkDataHelper.Receive(BitConverter.ToInt32(platformLength));
-            string platform = Encoding.UTF8.GetString(platformData);
+        private string ReceiveStringData(NetworkDataHelper networkDataHelper)
+        {
+            byte[] dataLength = networkDataHelper.Receive(largoDataLength);
+            byte[] data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength));
+            return Encoding.UTF8.GetString(data);
+        }
 
-  
-            byte[] unitsAvailableLength = networkDataHelper.Receive(largoDataLength);
-            byte[] unitsAvailableData = networkDataHelper.Receive(BitConverter.ToInt32(unitsAvailableLength));
-            string unitsAvailableString = Encoding.UTF8.GetString(unitsAvailableData);
-
-            int unitsAvailable = int.Parse(unitsAvailableString);
-
-
-            byte[] priceLength = networkDataHelper.Receive(largoDataLength);
-            byte[] priceData = networkDataHelper.Receive(BitConverter.ToInt32(priceLength));
-            string priceString = Encoding.UTF8.GetString(priceData);
-            int price = int.Parse(priceString);
-
-            byte[] valorationLength = networkDataHelper.Receive(largoDataLength);
-            byte[] valorationData = networkDataHelper.Receive(BitConverter.ToInt32(valorationLength));
-            string valorationString = Encoding.UTF8.GetString(valorationData);
-            int valoration = int.Parse(valorationString);
-
-            // Creamos el nuevo juego
-            Game newGame = new Game
+        private Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
+            int price, int valoration, User owner)
+        {
+            return new Game
             {
-                Name = gameName,
+                Name = name,
                 Genre = genre,
                 ReleaseDate = releaseDate,
                 Platform = platform,
-                Publisher = connectedUser.Username,
+                Publisher = owner.Username,
                 UnitsAvailable = unitsAvailable,
                 Price = price,
                 Valoration = valoration,
-                Owner = connectedUser
+                Owner = owner
             };
-
-            
-            GameManager.AddGame(newGame);
-
-           
         }
 
         private void DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
-            
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
 
-           
+
             if (GameManager.DoesGameExist(gameName))
             {
                 GameManager.RemoveGame(gameName);
@@ -187,21 +168,42 @@ namespace ServerApp
             }
         }
 
+        private void ShowAllGames(NetworkDataHelper networkDataHelper)
+        {
+            Console.WriteLine("Database.ShowAllGames -Initiated");
+            Console.WriteLine("Database.ShowAllGames -Executing");
+
+            var games = GameManager.GetAllGames();
+            if (games.Count == 0)
+            {
+                throw new InvalidOperationException("No games found.");
+            }
+
+            StringBuilder response = new StringBuilder("All games:\n");
+            foreach (var game in games)
+            {
+                response.Append(game.Name).Append("\n ");
+            }
+
+            SuccesfulResponse(response.ToString(), networkDataHelper);
+        }
 
         private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             Console.WriteLine("Database.ShowPublishedGames -Initiated");
             Console.WriteLine("Database.ShowPublishedGames -Executing");
-                StringBuilder response = new StringBuilder("Published games: ");
-                foreach (var game in connectedUser.PublishedGames)
-                {
-                    response.Append(game.Name).Append("\n ");
-                }
-                if (response.Length > 0)
-                {
-                    response.Length -= 2;
-                }
-                SuccesfulResponse(response.ToString(), networkDataHelper);
+            StringBuilder response = new StringBuilder("Published games: ");
+            foreach (var game in connectedUser.PublishedGames)
+            {
+                response.Append(game.Name).Append("\n ");
+            }
+
+            if (response.Length > 0)
+            {
+                response.Length -= 2;
+            }
+
+            SuccesfulResponse(response.ToString(), networkDataHelper);
         }
 
         private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
@@ -305,7 +307,7 @@ namespace ServerApp
                 }
             }
         }
-        
+
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
         {
             byte[] responseData = Encoding.UTF8.GetBytes(message);
@@ -313,14 +315,12 @@ namespace ServerApp
             networkDataHelper.Send(responseDataLength);
             networkDataHelper.Send(responseData);
         } // Este metodo envia un mensaje de respuesta exitosa al cliente
-        
+
         private static string protocolMessage(NetworkDataHelper networkDataHelper)
         {
-            byte[] dataLength =
-                networkDataHelper.Receive(largoDataLength); // Recibo la parte fija de los datos
+            byte[] dataLength = networkDataHelper.Receive(largoDataLength); // Recibo la parte fija de los datos
             byte[] data =
-                networkDataHelper.Receive(
-                    BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
+                networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
             Console.Write("Client says:");
             string message = Encoding.UTF8.GetString(data);
 
@@ -335,7 +335,7 @@ namespace ServerApp
             Console.WriteLine(message);
             return message;
         } // Este metodo recibe un mensaje del cliente y envia una respuesta exitosa
-        
+
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Server Application..");
@@ -360,21 +360,25 @@ namespace ServerApp
                     {
                         client.Close();
                     }
+
                     socketServer.Close();
                     serverRunning = false;
                     Console.WriteLine("Server is shutting down...");
                 }
             }).Start();
-            
+
             while (serverRunning)
             {
                 try
                 {
                     var programInstance = new Program();
-                    Socket clientSocket = socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                    Socket
+                        clientSocket =
+                            socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
                     clientSockets.Add(clientSocket);
                     Console.WriteLine("Client connected");
-                    new Thread(() => HandleClient(clientSocket, programInstance)).Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                    new Thread(() => HandleClient(clientSocket, programInstance))
+                        .Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
                 }
                 catch (Exception ex)
                 {
@@ -393,10 +397,10 @@ namespace ServerApp
                 {
                     try
                     {
-                        
                         while (connectedUser == null)
                         {
-                            switch (protocolMessage(networkDataHelper))
+                            string message = protocolMessage(networkDataHelper);
+                            switch (message)
                             {
                                 case "1":
                                     program.RegisterNewUser(networkDataHelper);
@@ -409,10 +413,15 @@ namespace ServerApp
                                     break;
                             }
                         }
+
                         while (connectedUser != null)
                         {
-                            switch (protocolMessage(networkDataHelper))
+                            string message = protocolMessage(networkDataHelper);
+                            switch (message)
                             {
+                                case "1":
+                                    program.ShowAllGames(networkDataHelper);
+                                    break;
                                 case "2":
                                     program.ShowAllGameInformation(networkDataHelper);
                                     break;
@@ -421,27 +430,6 @@ namespace ServerApp
                                     break;
                                 case "5":
                                     program.PublishGame(networkDataHelper, connectedUser);
-                                    break;
-                                case "6":
-                                    if (connectedUser.PublishedGames.Count == 0)
-                                    {
-                                        string response = $"You Dont Own Any Game.";
-                                        byte[] responseData = Encoding.UTF8.GetBytes(response);
-                                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
-                                        networkDataHelper.Send(responseDataLength);
-                                        networkDataHelper.Send(responseData);
-                                    }
-                                    else
-                                    {
-                                        program.ShowPublishedGames(networkDataHelper, connectedUser);
-                                        program.EditPublishedGame(networkDataHelper, connectedUser);  
-                                    }
-                                    break;
-                                case "7":
-                                    program.DeleteGame(networkDataHelper, connectedUser);
-                                    break;
-                                case "8":
-                                    connectedUser = null;
                                     break;
                             }
                         }

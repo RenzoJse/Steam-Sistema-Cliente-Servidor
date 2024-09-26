@@ -3,6 +3,7 @@
     public class GameManager
     {
         private List<Game> Games = new List<Game>();
+        private static object _lock = new object();
         
         public GameManager()
         {
@@ -27,7 +28,10 @@
 
         public List<Game> GetAllGames()
         {
-            return Games;
+            lock (_lock)
+            {
+                return Games;
+            }
         }
 
         public Game GetGameByName(string name)
@@ -37,15 +41,21 @@
 
         public void AddGame(Game game)
         {
-            Games.Add(game);
+            lock (_lock)
+            {
+                Games.Add(game);
+            }
         }
 
         public void RemoveGame(string name)
         {
-            var game = GetGameByName(name);
-            if (game != null)
+            lock (_lock)
             {
-                Games.Remove(game);
+                var game = GetGameByName(name);
+                if (game != null)
+                {
+                    Games.Remove(game);
+                }
             }
         }
 
@@ -59,7 +69,10 @@
 
         public bool DoesGameExist(string name)
         {
-            return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            lock (_lock)
+            {
+                return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            }
         }
     }
 }

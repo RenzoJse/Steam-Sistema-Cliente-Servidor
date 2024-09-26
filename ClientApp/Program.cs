@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Text;
 using Comunicacion;
 using ServerApp.Services;
@@ -66,9 +67,7 @@ namespace ClientApp
             Console.WriteLine("Juego publicado exitosamente.");
 
         }
-
-
-
+        
         private static void RegisterUser()
         {
             Console.Write("Enter username: ");
@@ -147,14 +146,10 @@ namespace ClientApp
 
         private static void DeleteGame()
         {
-            
             Console.Write("Ingrese el nombre del juego a borrar: ");
             string gameName = Console.ReadLine();
-
             
             SendMessage(gameName);
-
-           
         }
 
 
@@ -246,6 +241,9 @@ namespace ClientApp
 
                     switch (option)
                     {
+                        case "1":
+                            SendAndReceiveMessage("Hola");
+                            break;
                         case "2":
                             Console.WriteLine("Game Name: ");
                             string gameName = Console.ReadLine();
