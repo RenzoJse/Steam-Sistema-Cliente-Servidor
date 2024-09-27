@@ -307,6 +307,21 @@ namespace ServerApp
                 }
             }
         }
+        
+        public void ReviewGame(NetworkDataHelper networkDataHelper)
+        {
+            string gameName = ReceiveStringData(networkDataHelper);
+            Game game = GameManager.GetGameByName(gameName);
+            if (game == null)
+            {
+                throw new InvalidOperationException("Game not found.");
+            }
+            else
+            {
+                int valoration = int.Parse(ReceiveStringData(networkDataHelper));
+                GameManager.AddValoration(gameName, valoration);
+            }
+        }
 
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
         {
@@ -421,6 +436,9 @@ namespace ServerApp
                                     break;
                                 case "3":
                                     program.PurchaseGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "4":
+                                    program.ReviewGame(networkDataHelper);
                                     break;
                                 case "5":
                                     program.PublishGame(networkDataHelper, connectedUser);

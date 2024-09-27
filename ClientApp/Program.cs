@@ -116,13 +116,12 @@ namespace ClientApp
         
         private static bool SendAndReceiveMessageBool(string message)
         {
-            byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
-            byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
+            byte[] data = Encoding.UTF8.GetBytes(message); 
+            byte[] dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                // ENVIO AL SERVER
-                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
-                networkDataHelper.Send(data); // Envio el mensaje (parte variable)
+                networkDataHelper.Send(dataLength); 
+                networkDataHelper.Send(data);
 
                 // RECIBO DEL SERVER
                 byte[] responseDataLength = networkDataHelper.Receive(4);
@@ -195,6 +194,22 @@ namespace ClientApp
             {
                 Console.WriteLine("Error: " + e.Message);
             }
+        }
+        
+        private static void ValorateGame()
+        {
+            Console.Write("Ingrese el nombre del juego a valorar: ");
+            string gameName = Console.ReadLine();
+            SendMessage(gameName);
+
+            Console.Write("Ingrese la valoración (0-10): ");
+            string valoracion = Console.ReadLine();
+            while (!int.TryParse(valoracion, out int val) || val < 0 || val > 10)
+            {
+                Console.Write("Valoración inválida. Ingrese una valoración entre 0 y 10: ");
+                valoracion = Console.ReadLine();
+            }
+            SendMessage(valoracion);
         }
         
         static void Main(string[] args)
@@ -272,6 +287,9 @@ namespace ClientApp
                             Console.WriteLine("Titulo del juego a comprar: ");
                             string gamePurchase = Console.ReadLine();
                             SendAndReceiveMessage(gamePurchase);
+                            break;
+                        case "4":
+                            ValorateGame();
                             break;
                         case "5":
                             PublishGame();

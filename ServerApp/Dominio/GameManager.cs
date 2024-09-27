@@ -74,5 +74,17 @@
                 return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             }
         }
+        
+        public void AddValoration(string name, int valoration)
+        {
+            lock (_lock)
+            {
+                var game = GetGameByName(name);
+                if (game != null)
+                {
+                    game.Valoration = (game.Valoration + valoration) / 2;
+                }
+            }
+        }
     }
 }
