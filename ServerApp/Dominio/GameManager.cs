@@ -4,7 +4,7 @@
     {
         private List<Game> Games = new List<Game>();
         private static object _lock = new object();
-        
+
         public GameManager()
         {
             Games.Add(new Game
@@ -59,9 +59,9 @@
             }
         }
 
-        public void DiscountPurchasedGame(Game game) 
-        { 
-            Game gamePurchased = Games.FirstOrDefault(g=> g.Name == game.Name);
+        public void DiscountPurchasedGame(Game game)
+        {
+            Game gamePurchased = Games.FirstOrDefault(g => g.Name == game.Name);
 
             if (gamePurchased != null)
                 gamePurchased.UnitsAvailable--;
@@ -74,7 +74,7 @@
                 return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             }
         }
-        
+
         public void AddValoration(string name, int valoration)
         {
             lock (_lock)
@@ -84,6 +84,24 @@
                 {
                     game.Valoration = (game.Valoration + valoration) / 2;
                 }
+            }
+        }
+
+        public List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
+        {
+            lock (_lock)
+            {
+                return Games.Where(g =>
+                {
+                    var property = typeof(Game).GetProperty(attributeName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(g)?.ToString();
+                        return value != null && value.Contains(attributeValue, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    return false;
+                }).ToList();
             }
         }
     }

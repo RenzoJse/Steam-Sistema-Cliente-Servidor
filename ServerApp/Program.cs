@@ -188,7 +188,77 @@ namespace ServerApp
             SuccesfulResponse(response.ToString(), networkDataHelper);
         }
 
-        private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
+        private void SearchGames(NetworkDataHelper networkDataHelper)
+        {
+            Console.WriteLine("Database.SearchGames -Initiated");
+            Console.WriteLine("Database.SearchGames -Executing");
+            string option = ReceiveStringData(networkDataHelper);
+            switch (option)
+            {
+                case "1":
+                    ShowAllGamesByGenre(networkDataHelper);
+                    break;
+                case "2":
+                    ShowAllGamesByPlatform(networkDataHelper);
+                    break;
+                case "3":
+                    ShowAllGamesByValorations(networkDataHelper);
+                    break;
+                case "4":
+                    ShowAllGames(networkDataHelper);
+                    break;
+            }
+        }
+        
+        private void ShowAllGamesByValorations(NetworkDataHelper networkDataHelper)
+        {
+            string valoration = ReceiveStringData(networkDataHelper);
+            Console.WriteLine("Received valoration: " + valoration);
+
+            var distinctGamesByValoration = GameManager.GetGamesByAttribute("Valoration", valoration);
+            Console.WriteLine("Found " + distinctGamesByValoration.Count + " games with valoration " + valoration);
+
+            StringBuilder response = new StringBuilder("Games with valoration " + valoration + ":\n");
+            foreach (var game in distinctGamesByValoration)
+            {
+                response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
+            }
+            SuccesfulResponse(response.ToString(), networkDataHelper);
+        }
+
+        private void ShowAllGamesByGenre(NetworkDataHelper networkDataHelper)
+        {
+            string genre = ReceiveStringData(networkDataHelper);
+            Console.WriteLine("Received genre: " + genre);
+
+            var distinctGamesByGenre = GameManager.GetGamesByAttribute("Genre", genre);
+            Console.WriteLine("Found " + distinctGamesByGenre.Count + " games in genre " + genre);
+
+            StringBuilder response = new StringBuilder("Games in genre " + genre + ":\n");
+            foreach (var game in distinctGamesByGenre)
+            {
+                response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
+            }
+            SuccesfulResponse(response.ToString(), networkDataHelper);
+        }
+        
+        private void ShowAllGamesByPlatform(NetworkDataHelper networkDataHelper)
+        {
+            string platform = ReceiveStringData(networkDataHelper);
+            Console.WriteLine("Received platform: " + platform);
+
+            var distinctGamesByPlatform = GameManager.GetGamesByAttribute("Platform", platform);
+            Console.WriteLine("Found " + distinctGamesByPlatform.Count + " games in platform " + platform);
+
+            StringBuilder response = new StringBuilder("Games in platform " + platform + ":\n");
+            foreach (var game in distinctGamesByPlatform)
+            {
+                response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
+            }
+            SuccesfulResponse(response.ToString(), networkDataHelper);
+        }
+
+    private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             Console.WriteLine("Database.ShowPublishedGames -Initiated");
             Console.WriteLine("Database.ShowPublishedGames -Executing");
@@ -429,7 +499,7 @@ namespace ServerApp
                             switch (protocolMessage(networkDataHelper))
                             {
                                 case "1":
-                                    program.ShowAllGames(networkDataHelper);
+                                    program.SearchGames(networkDataHelper);
                                     break;
                                 case "2":
                                     program.ShowAllGameInformation(networkDataHelper);

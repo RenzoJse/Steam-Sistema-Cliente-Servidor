@@ -196,6 +196,46 @@ namespace ClientApp
             }
         }
         
+        private static void SearchGames()
+        {
+            Console.WriteLine("1. Search by genre");
+            Console.WriteLine("2. Search by platform");
+            Console.WriteLine("3. Search by price");
+            Console.WriteLine("4. Search by valoration");
+            Console.WriteLine("5. Show all games");
+            string option = Console.ReadLine();
+            SendMessage(option);
+            switch (option)
+            {
+                case "1":
+                    Console.Write("Enter genre: ");
+                    string genre = Console.ReadLine();
+                    if (genre != null) SendAndReceiveMessage(genre);
+                    break;
+                case "2":
+                    Console.Write("Enter platform: ");
+                    string platform = Console.ReadLine();
+                    SendAndReceiveMessage(platform);
+                    break;
+                case "3":
+                    Console.Write("Enter valoration (1-10): ");
+                    string valoration = Console.ReadLine();
+                    while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
+                    {
+                        Console.WriteLine("Invalid valoration. Please enter a number between 1 and 10.");
+                        valoration = Console.ReadLine();
+                    }
+                    SendAndReceiveMessage(valoration);
+                    break;
+                case "4":
+                    SendAndReceiveMessage("5");
+                    break;
+                default:
+                    Console.WriteLine("Invalid option. Please try again.");
+                    break;
+            }
+        }
+        
         private static void ValorateGame()
         {
             Console.Write("Ingrese el nombre del juego a valorar: ");
@@ -276,7 +316,7 @@ namespace ClientApp
                     switch (option)
                     {
                         case "1":
-                            ReceiveMessage("ShowMeAllGames");
+                            SearchGames();
                             break;
                         case "2":
                             Console.WriteLine("Game Name: ");
