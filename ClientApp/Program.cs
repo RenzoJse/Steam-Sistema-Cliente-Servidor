@@ -40,6 +40,14 @@ namespace ClientApp
             Console.Write("Ingrese el título del juego: ");
             string titulo = Console.ReadLine();
             SendMessage(titulo);
+            string error = ReceiveMessage();
+            while (error == "Error: That Games Already Exist.")
+            {
+                Console.Write("Ingrese el título del juego: ");
+                titulo = Console.ReadLine();
+                SendMessage(titulo);
+                error = ReceiveMessage();
+            }
 
             Console.Write("Ingrese el género del juego: ");
             string genero = Console.ReadLine();
@@ -188,7 +196,7 @@ namespace ClientApp
             }
         }
         
-        private static void ReceiveMessage(string message)
+        private static string ReceiveMessage()
         {
             try
             {
@@ -196,6 +204,7 @@ namespace ClientApp
                 byte[] responseDataLength = networkDataHelper.Receive(4);
                 byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
+                return Encoding.UTF8.GetString(responseData);
             }
             catch (SocketException)
             {
@@ -204,16 +213,17 @@ namespace ClientApp
             }catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
+                return "Error: " + e.Message;
             }
+            return null;
         }
         
         private static void SearchGames()
         {
             Console.WriteLine("1. Search by genre");
             Console.WriteLine("2. Search by platform");
-            Console.WriteLine("3. Search by price");
-            Console.WriteLine("4. Search by valoration");
-            Console.WriteLine("5. Show all games");
+            Console.WriteLine("3. Search by valoration");
+            Console.WriteLine("4. Show all games");
             string option = Console.ReadLine();
             SendMessage(option);
             switch (option)
@@ -247,7 +257,7 @@ namespace ClientApp
             }
         }
         
-        private static void ValorateGame()
+        private static void ValorateGame() // DEBERIAMOS PONER UN WHILE PARA QUE EL JUEGO EXISTA. TIENE Q ESTAR COMPRADO.
         {
             Console.Write("Ingrese el nombre del juego a valorar: ");
             string gameName = Console.ReadLine();
@@ -255,9 +265,9 @@ namespace ClientApp
 
             Console.Write("Ingrese la valoración (0-10): ");
             string valoracion = Console.ReadLine();
-            while (!int.TryParse(valoracion, out int val) || val < 0 || val > 10)
+            while (!int.TryParse(valoracion, out int val) || val < 1 || val > 10)
             {
-                Console.Write("Valoración inválida. Ingrese una valoración entre 0 y 10: ");
+                Console.Write("Valoración inválida. Ingrese una valoración entre 1 y 10: ");
                 valoracion = Console.ReadLine();
             }
             SendMessage(valoracion);

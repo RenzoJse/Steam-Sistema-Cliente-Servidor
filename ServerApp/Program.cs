@@ -106,14 +106,19 @@ namespace ServerApp
         {
             Console.WriteLine("Database.PublishGame -Initiated");
             Console.WriteLine("Database.PublishGame -Executing");
-
+            
             string gameName = ReceiveStringData(networkDataHelper);
-            if (GameManager.DoesGameExist(gameName))
+            bool gameExists = GameManager.DoesGameExist(gameName);
+            while (gameExists)
             {
-                SuccesfulResponse("Game already exists. Returning to menu.", networkDataHelper);
-                return;
+                SuccesfulResponse("Error: That Games Already Exist.", networkDataHelper);
+                gameName = ReceiveStringData(networkDataHelper);
+                gameExists = GameManager.DoesGameExist(gameName);
+                if (!gameExists)
+                {
+                    SuccesfulResponse("Succesful New Game Name", networkDataHelper);
+                }
             }
-
             string genre = ReceiveStringData(networkDataHelper);
             DateTime releaseDate = DateTime.Parse(ReceiveStringData(networkDataHelper));
             string platform = ReceiveStringData(networkDataHelper);
@@ -404,8 +409,7 @@ namespace ServerApp
         private static string protocolMessage(NetworkDataHelper networkDataHelper)
         {
             byte[] dataLength = networkDataHelper.Receive(largoDataLength); // Recibo la parte fija de los datos
-            byte[] data =
-                networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
+            byte[] data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
             Console.Write("Client says:");
             string message = Encoding.UTF8.GetString(data);
 
