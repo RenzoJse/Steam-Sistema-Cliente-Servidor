@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Comunicacion;
 using ServerApp.Services;
+using Communication;
 
 namespace ClientApp
 {
@@ -34,7 +35,7 @@ namespace ClientApp
             Console.WriteLine("8. Logout");
         }
 
-        private static void PublishGame()
+        private static void PublishGame(Socket socketClient)
         {
             Console.Write("Ingrese el título del juego: ");
             string titulo = Console.ReadLine();
@@ -59,6 +60,16 @@ namespace ClientApp
             Console.Write("Ingrese el precio: ");
             string precio = Console.ReadLine();
             SendMessage(precio);
+
+            bool parar = false;
+            while (!parar)
+            {
+                Console.WriteLine("Ingrese la ruta completa del archivo a enviar: ");
+                String abspath = Console.ReadLine();
+                var fileCommonHandler = new FileCommsHandler(socketClient);
+                fileCommonHandler.SendFile(abspath);
+                Console.WriteLine("Se envio el archivo al Servidor");
+            }
 
             Console.Write("Ingrese la valoración: ");
             string valoracion = Console.ReadLine();
@@ -332,7 +343,7 @@ namespace ClientApp
                             ValorateGame();
                             break;
                         case "5":
-                            PublishGame();
+                            PublishGame(socketClient);
                             break;
                         case "6":
                             if (HavePublishedGames(option))
