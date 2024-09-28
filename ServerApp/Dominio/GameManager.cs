@@ -61,10 +61,13 @@
 
         public void DiscountPurchasedGame(Game game)
         {
-            Game gamePurchased = Games.FirstOrDefault(g => g.Name == game.Name);
+            lock (_lock)
+            {
+                Game gamePurchased = Games.FirstOrDefault(g => g.Name == game.Name);
 
-            if (gamePurchased != null)
-                gamePurchased.UnitsAvailable--;
+                if (gamePurchased != null)
+                    gamePurchased.UnitsAvailable--;
+            }
         }
 
         public bool DoesGameExist(string name)
