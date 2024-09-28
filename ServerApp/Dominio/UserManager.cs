@@ -19,7 +19,7 @@ namespace Comunicacion.Dominio
             };
             admin.PurchasedGames.Add(new Game
             {
-                Name = "Fornite",
+                Name = "Fortnite",
                 Genre = "Action",
                 Publisher = "Dev 1",
                 ReleaseDate = new DateTime(2020, 1, 1),
@@ -27,7 +27,62 @@ namespace Comunicacion.Dominio
                 Valoration = 8
             });
             users.Add(admin);
+
+            var user1 = new User
+            {
+                Username = "alexgamer",
+                Password = "password1",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user1);
+
+            var user2 = new User
+            {
+                Username = "lunaplay",
+                Password = "pass1234",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user2);
+
+            var user3 = new User
+            {
+                Username = "johndoe",
+                Password = "john2024",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user3);
+
+            var user4 = new User
+            {
+                Username = "elitewarrior",
+                Password = "elitepass",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user4);
+
+            var user5 = new User
+            {
+                Username = "noobking",
+                Password = "noobking",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user5);
+
+            var user6 = new User
+            {
+                Username = "speedsterjack",
+                Password = "fastgame",
+                PublishedGames = new List<Game>(),
+                PurchasedGames = new List<Game>()
+            };
+            users.Add(user6);
         }
+
 
         public bool RegisterUser(string username, string password)
         {

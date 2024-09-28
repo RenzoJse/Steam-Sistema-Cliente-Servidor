@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Comunicacion;
 using ServerApp.Services;
+using Communication;
 
 namespace ClientApp
 {
@@ -34,45 +35,63 @@ namespace ClientApp
             Console.WriteLine("8. Logout");
         }
 
-        private static void PublishGame()
+        private static void PublishGame(Socket socketClient)
         {
-            Console.Write("Ingrese el título del juego: ");
+            Console.Write("Enter the game title:");
             string titulo = Console.ReadLine();
             SendMessage(titulo);
             string error = ReceiveMessage();
             while (error == "Error: That Games Already Exist.")
             {
-                Console.Write("Ingrese el título del juego: ");
+                Console.Write("Enter the game title:");
                 titulo = Console.ReadLine();
                 SendMessage(titulo);
                 error = ReceiveMessage();
             }
 
-            Console.Write("Ingrese el género del juego: ");
+            Console.Write("Enter the game's genre:");
             string genero = Console.ReadLine();
             SendMessage(genero);
 
-            Console.Write("Ingrese la fecha de lanzamiento (dd/mm/yyyy): ");
+            Console.Write("Enter the release date (dd/mm/yyyy):");
             string fechaLanzamiento = Console.ReadLine();
             SendMessage(fechaLanzamiento);
+            string error2 = ReceiveMessage();
+            while (error2 == "Error: Invalid Date Format. Please enter a valid date.")
+            {
+                Console.Write("Enter the release date (dd/mm/yyyy):");
+                fechaLanzamiento = Console.ReadLine();
+                SendMessage(fechaLanzamiento);
+                error2 = ReceiveMessage();
+            }
 
-            Console.Write("Ingrese la plataforma: ");
+            Console.Write("Enter the platform:");
             string plataforma = Console.ReadLine();
             SendMessage(plataforma);
 
-            Console.Write("Ingrese la cantidad de unidades disponibles: ");
+            Console.Write("Enter the number of units available:");
             string unidadesDisponibles = Console.ReadLine();
             SendMessage(unidadesDisponibles);
 
-            Console.Write("Ingrese el precio: ");
+            Console.Write("Enter the price:");
             string precio = Console.ReadLine();
             SendMessage(precio);
 
-            Console.Write("Ingrese la valoración: ");
-            string valoracion = Console.ReadLine();
-            SendMessage(valoracion);
+            Console.Write("Do you want to upload a cover image? (yes/no)");
+            string variableSubida= Console.ReadLine();
+            SendMessage(variableSubida);
 
-            Console.WriteLine("Juego publicado exitosamente.");
+            string vairableSubida2 = ReceiveMessage();
+            if (vairableSubida2 == "yes")
+            {
+                Console.WriteLine("Enter the full path of the file to send:");
+                String abspath = Console.ReadLine();
+                var fileCommonHandler = new FileCommsHandler(socketClient);
+                fileCommonHandler.SendFile(abspath);
+                Console.WriteLine("The file was sent to the server");
+
+            }
+            Console.WriteLine("Game published successfully.");
 
         }
         
@@ -342,7 +361,7 @@ namespace ClientApp
                             ValorateGame();
                             break;
                         case "5":
-                            PublishGame();
+                            PublishGame(socketClient);
                             break;
                         case "6":
                             if (HavePublishedGames(option))

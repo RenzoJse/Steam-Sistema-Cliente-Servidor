@@ -43,6 +43,8 @@
             }
         }
 
+        
+
         public void DiscountPurchasedGame(Game game)
         {
             lock (_lock)

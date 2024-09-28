@@ -5,6 +5,7 @@ using Comunicacion;
 using Comunicacion.Dominio;
 using ServerApp.DataAccess;
 using ServerApp.Services;
+using Communication;
 
 namespace ServerApp
 {
@@ -102,7 +103,7 @@ namespace ServerApp
         }
 
 
-        private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
         {
             Console.WriteLine("Database.PublishGame -Initiated");
             Console.WriteLine("Database.PublishGame -Executing");
@@ -119,18 +120,53 @@ namespace ServerApp
                     SuccesfulResponse("Succesful New Game Name", networkDataHelper);
                 }
             }
+            SuccesfulResponse("Succesful New Game Name", networkDataHelper);
             string genre = ReceiveStringData(networkDataHelper);
-            DateTime releaseDate = DateTime.Parse(ReceiveStringData(networkDataHelper));
+            string releaseDateInput = ReceiveStringData(networkDataHelper);
+            DateTime releaseDate;
+            while (!DateTime.TryParse(releaseDateInput, out releaseDate))
+            {
+                SuccesfulResponse("Error: Invalid Date Format. Please enter a valid date.", networkDataHelper);
+                releaseDateInput = ReceiveStringData(networkDataHelper);
+                bool estado = DateTime.TryParse(releaseDateInput, out releaseDate);
+                if (estado)
+                {
+                    SuccesfulResponse("Succesful New Date", networkDataHelper);
+                }
+            }
+            SuccesfulResponse("Succesful New Date", networkDataHelper);
+
             string platform = ReceiveStringData(networkDataHelper);
             int unitsAvailable = int.Parse(ReceiveStringData(networkDataHelper));
             int price = int.Parse(ReceiveStringData(networkDataHelper));
-            int valoration = int.Parse(ReceiveStringData(networkDataHelper));
+            string variableSubida = ReceiveStringData(networkDataHelper);
+            SuccesfulResponse(variableSubida, networkDataHelper);
+            if (variableSubida == "yes")
+            {
+                Console.WriteLine("Antes de recibir el archivo");
+                var fileCommonHandler = new FileCommsHandler(socketClient);
+                fileCommonHandler.ReceiveFile();
+                Console.WriteLine("Archivo recibido!!");
+            }
+
+            
+            int valoration = 0;
 
             Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
                 connectedUser);
             GameManager.AddGame(newGame);
             connectedUser.PublishedGames.Add(newGame);
         }
+
+
+        
+
+
+
+
+
+
+
 
         private string ReceiveStringData(NetworkDataHelper networkDataHelper)
         {
@@ -515,7 +551,7 @@ namespace ServerApp
                                     program.ReviewGame(networkDataHelper);
                                     break;
                                 case "5":
-                                    program.PublishGame(networkDataHelper, connectedUser);
+                                    program.PublishGame(networkDataHelper, connectedUser, clientSocket);
                                     break;
                                 case "6":
                                     if (connectedUser.PublishedGames.Count == 0)
