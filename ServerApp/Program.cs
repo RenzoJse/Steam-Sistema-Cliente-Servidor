@@ -121,19 +121,7 @@ namespace ServerApp
                                     program.PublishGame(networkDataHelper, connectedUser, clientSocket);
                                     break;
                                 case "6":
-                                    if (connectedUser.PublishedGames.Count == 0)
-                                    {
-                                        string response = $"You Dont Own Any Game.";
-                                        byte[] responseData = Encoding.UTF8.GetBytes(response);
-                                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
-                                        networkDataHelper.Send(responseDataLength);
-                                        networkDataHelper.Send(responseData);
-                                    }
-                                    else
-                                    {
-                                        program.ShowPublishedGames(networkDataHelper, connectedUser);
-                                        program.EditPublishedGame(networkDataHelper, connectedUser);
-                                    }
+                                    program.EditPublishedGame(networkDataHelper, connectedUser);
                                     break;
                                 case "7":
                                     program.DeleteGame(networkDataHelper, connectedUser);
@@ -456,103 +444,124 @@ namespace ServerApp
 
         private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
-            Console.WriteLine("Database.EditPublishedGame -Initiated");
-            Console.WriteLine("Database.EditPublishedGame -Executing");
+            Console.WriteLine("Database.EditPublishedGame - Initiated");
 
+            // Recibir el nombre del juego a modificar
+            string gameName = ReceiveStringData(networkDataHelper);
+            Game game = GameManager.GetGameByName(gameName);
+
+            // Validar que el juego existe y que el usuario es el publicador
+            if (game == null || !connectedUser.PublishedGames.Contains(game))
+            {
+                SuccesfulResponse("Error: Game not found or you are not the publisher.", networkDataHelper);
+                return;
+            }
+
+            SuccesfulResponse("Game found. You can modify it.", networkDataHelper);
+
+            bool modifying = true;
+            while (modifying)
+            {
+                // Esperar recibir un mensaje indicando si se modifica un campo o si se termina
+                string action = ReceiveStringData(networkDataHelper);
+
+                if (action == "finishModification")
+                {
+                    modifying = false;
+                    Console.WriteLine("Modification finished for game: " + game.Name);
+                    continue;
+                }
+
+                if (action == "modifyField")
+                {
+                    // Recibir el campo a modificar y el nuevo valor
+                    string field = ReceiveStringData(networkDataHelper);
+                    string newValue = ReceiveStringData(networkDataHelper);
+
+                    try
+                    {
+                        switch (field.ToLower())
+                        {
+                            case "title":
+                                game.Name = newValue;
+                                break;
+                            case "genre":
+                                game.Genre = newValue;
+                                break;
+                            case "release date":
+                                if (DateTime.TryParse(newValue, out DateTime newReleaseDate))
+                                {
+                                    game.ReleaseDate = newReleaseDate;
+                                }
+                                else
+                                {
+                                    throw new ArgumentException("Invalid date format.");
+                                }
+                                break;
+                            case "platform":
+                                game.Platform = newValue;
+                                break;
+                            case "publisher":
+                                game.Publisher = newValue;
+                                break;
+                            case "units available":
+                                if (int.TryParse(newValue, out int newUnitsAvailable))
+                                {
+                                    game.UnitsAvailable = newUnitsAvailable;
+                                }
+                                else
+                                {
+                                    throw new ArgumentException("Invalid number format.");
+                                }
+                                break;
+                            default:
+                                throw new ArgumentException("Invalid field.");
+                        }
+
+                        SuccesfulResponse("Game edited successfully", networkDataHelper);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
+                    }
+                }
+            }
+        }
+
+
+
+
+        private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        {
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
 
             Game game = GameManager.GetGameByName(gameName);
-            if (game != null && connectedUser.PublishedGames.Contains(game))
+
+            if (game == null)
             {
-                byte[] fieldLength = networkDataHelper.Receive(largoDataLength);
-                byte[] fieldData = networkDataHelper.Receive(BitConverter.ToInt32(fieldLength));
-                string field = Encoding.UTF8.GetString(fieldData);
+                throw new InvalidOperationException("The game does not exist.");
+            }
+            else if (game.UnitsAvailable <= 0)
+            {
+                throw new InvalidOperationException("No units available.");
+            }
 
-                byte[] newValueLength = networkDataHelper.Receive(largoDataLength);
-                byte[] newValueData = networkDataHelper.Receive(BitConverter.ToInt32(newValueLength));
-                string newValue = Encoding.UTF8.GetString(newValueData);
-
-                switch (field.ToLower())
-                {
-                    case "title":
-                        game.Name = newValue;
-                        break;
-                    case "genre":
-                        game.Genre = newValue;
-                        break;
-                    case "release date":
-                        if (DateTime.TryParse(newValue, out DateTime newReleaseDate))
-                        {
-                            game.ReleaseDate = newReleaseDate;
-                        }
-                        else
-                        {
-                            throw new ArgumentException("Invalid date format.");
-                        }
-
-                        break;
-                    case "platform":
-                        game.Platform = newValue;
-                        break;
-                    case "publisher":
-                        game.Publisher = newValue;
-                        break;
-                    case "units available":
-                        if (int.TryParse(newValue, out int newUnitsAvailable))
-                        {
-                            game.UnitsAvailable = newUnitsAvailable;
-                        }
-                        else
-                        {
-                            throw new ArgumentException("Invalid number format.");
-                        }
-
-                        break;
-                    default:
-                        throw new ArgumentException("Invalid field.");
-                }
-
-                SuccesfulResponse("Game edited successfully", networkDataHelper);
+            Console.WriteLine("Database.PurchaseGame - Initiated");
+            Console.WriteLine("Database.PurchaseGame - Executing");
+            if (UserManager.PurchaseGame(game, connectedUser))
+            {
+                GameManager.DiscountPurchasedGame(game);
+                Console.WriteLine("Database.PurchaseGame - The game: " + game.Name + " has been purchased");
+                SuccesfulResponse("Game purchased successfully", networkDataHelper);
             }
             else
             {
-                throw new InvalidOperationException("Game not found or user is not the publisher.");
+                throw new InvalidOperationException("Error purchasing the game.");
             }
         }
 
-        private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
-        {
-
-                byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
-                byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
-                string gameName = Encoding.UTF8.GetString(gameNameData);
-
-                Game game = GameManager.GetGameByName(gameName);
-
-                if (game == null)
-                {
-                    throw new InvalidOperationException("El juego no existe.");
-                }
-                else if (game.UnitsAvailable <= 0)
-                {
-                    throw new InvalidOperationException("No hay unidades disponibles.");
-                }
-
-                Console.WriteLine("Database.PurchaseGame -Initiated");
-                Console.WriteLine("Database.PurchaseGame -Executing");
-                if (UserManager.PurchaseGame(game, connectedUser))
-                {
-                    GameManager.DiscountPurchasedGame(game);
-                    Console.WriteLine("Database.PurchaseGame - El juego: " + game.Name + " ha sido comprado");
-                    SuccesfulResponse("Juego comprado exitosamente", networkDataHelper);
-                }
-                else
-                {
-                    throw new InvalidOperationException("Error al comprar el juego.");
-                }
-        }
 
         public void ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {

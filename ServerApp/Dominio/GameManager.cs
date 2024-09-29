@@ -133,7 +133,7 @@
             {
                 Name = "Fornite",
                 Genre = "Action",
-                Publisher = "Dev 1",
+                Publisher = "admin",
                 ReleaseDate = new DateTime(2020, 1, 1),
                 UnitsAvailable = 10,
                 Valoration = 8,

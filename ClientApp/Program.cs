@@ -70,10 +70,24 @@ namespace ClientApp
 
             Console.Write("Enter the number of units available:");
             string unidadesDisponibles = Console.ReadLine();
+            int unidades;
+            while (!int.TryParse(unidadesDisponibles, out unidades))
+            {
+                Console.WriteLine("Invalid input. Please enter a valid integer for the number of units available.");
+                Console.Write("Enter the number of units available:");
+                unidadesDisponibles = Console.ReadLine();
+            }
             SendMessage(unidadesDisponibles);
 
             Console.Write("Enter the price:");
             string precio = Console.ReadLine();
+            int precioValue;
+            while (!int.TryParse(precio, out precioValue))
+            {
+                Console.WriteLine("Invalid input. Please enter a valid integer for the price.");
+                Console.Write("Enter the price:");
+                precio = Console.ReadLine();
+            }
             SendMessage(precio);
 
             Console.Write("Do you want to upload a cover image? (yes/no)");
@@ -170,6 +184,116 @@ namespace ClientApp
                 return false;
             }
         }
+
+
+        private static void ModifyGame()
+        {
+            Console.Write("Enter the name of the game you want to modify: ");
+            string gameName = Console.ReadLine();
+            SendMessage(gameName); // Enviar el nombre del juego al servidor
+
+            // Recibir la respuesta del servidor para validar si existe y si el usuario tiene permisos
+            string response = ReceiveMessage();
+            if (response.Contains("Error"))
+            {
+                Console.WriteLine(response);
+                return; // Si hay error, terminamos el proceso
+            }
+
+            bool modifying = true;
+            while (modifying)
+            {
+                // Desplegar el menú para elegir qué atributo modificar
+                Console.WriteLine("What attribute would you like to modify?");
+                Console.WriteLine("1. Title");
+                Console.WriteLine("2. Genre");
+                Console.WriteLine("3. Release Date");
+                Console.WriteLine("4. Platform");
+                Console.WriteLine("5. Publisher");
+                Console.WriteLine("6. Units Available");
+                Console.WriteLine("7. Finish");
+
+                string option = Console.ReadLine();
+                string field = string.Empty;
+                string newValue = string.Empty;
+
+                switch (option)
+                {
+                    case "1":
+                        field = "title";
+                        Console.Write("Enter new title: ");
+                        newValue = Console.ReadLine();
+                        break;
+                    case "2":
+                        field = "genre";
+                        Console.Write("Enter new genre: ");
+                        newValue = Console.ReadLine();
+                        break;
+                    case "3":
+                        field = "release date";
+                        Console.Write("Enter new release date (dd/mm/yyyy): ");
+                        newValue = Console.ReadLine();
+                        DateTime releaseDate;
+                        while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out releaseDate))
+                        {
+                            Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
+                            newValue = Console.ReadLine();
+                        }
+                        break;
+                    case "4":
+                        field = "platform";
+                        Console.Write("Enter new platform: ");
+                        newValue = Console.ReadLine();
+                        break;
+                    case "5":
+                        field = "publisher";
+                        Console.Write("Enter new publisher: ");
+                        newValue = Console.ReadLine();
+                        break;
+                    case "6":
+                        field = "units available";
+                        Console.Write("Enter new units available: ");
+                        newValue = Console.ReadLine();
+                        int units;
+                        while (!int.TryParse(newValue, out units))
+                        {
+                            Console.WriteLine("Invalid input. Please enter a valid integer for units available.");
+                            newValue = Console.ReadLine();
+                        }
+                        break;
+                    case "7":
+                        Console.WriteLine("Finished modifying.");
+                        modifying = false;
+                        continue;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        continue;
+                }
+
+                // Enviar al servidor el campo y el nuevo valor
+                SendMessage("modifyField"); // Enviar una etiqueta clara de que se va a modificar un campo
+                SendMessage(field);
+                SendMessage(newValue);
+
+                // Recibir respuesta del servidor sobre la modificación
+                string modifyResponse = ReceiveMessage();
+                Console.WriteLine(modifyResponse);
+
+                // Preguntar al usuario si desea continuar modificando
+                Console.WriteLine("Do you want to modify another attribute? (yes/no)");
+                string continueModifying = Console.ReadLine().ToLower();
+                if (continueModifying != "yes")
+                {
+                    modifying = false;
+                    SendMessage("finishModification"); // Enviar señal clara de terminar la modificación
+                    Console.WriteLine("Finished modifying the game.");
+                }
+            }
+        }
+
+
+
+
 
         private static void DeleteGame()
         {
@@ -391,12 +515,7 @@ namespace ClientApp
                             PublishGame(socketClient);
                             break;
                         case "6":
-                            if (HavePublishedGames(option))
-                            {
-                                Console.WriteLine("Game Name You Want To Modify: ");
-                                string gameName2 = Console.ReadLine();
-                                SendAndReceiveMessage(gameName2);
-                            }
+                            ModifyGame();
                             break;
                         case "7":
                             DeleteGame();

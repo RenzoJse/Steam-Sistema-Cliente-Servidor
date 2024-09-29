@@ -79,7 +79,7 @@ namespace Comunicacion.Dominio
 
                 User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
 
-                if (activeUser is null) //si el usuario no existe
+                if (activeUser is null) 
                 {
                     return;
                 }
@@ -101,8 +101,8 @@ namespace Comunicacion.Dominio
 
             var user1 = new User
             {
-                Username = "alexgamer",
-                Password = "password1",
+                Username = "nicolasduarte",
+                Password = "password",
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
@@ -110,8 +110,8 @@ namespace Comunicacion.Dominio
 
             var user2 = new User
             {
-                Username = "lunaplay",
-                Password = "pass1234",
+                Username = "renzojose",
+                Password = "password",
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
