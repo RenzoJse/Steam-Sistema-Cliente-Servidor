@@ -121,7 +121,7 @@ namespace ServerApp
                                     program.PublishGame(networkDataHelper, connectedUser, clientSocket);
                                     break;
                                 case "6":
-                                    program.EditPublishedGame(networkDataHelper, connectedUser);
+                                    program.EditPublishedGame(networkDataHelper, connectedUser,clientSocket);
                                     break;
                                 case "7":
                                     program.DeleteGame(networkDataHelper, connectedUser);
@@ -442,15 +442,15 @@ namespace ServerApp
             SuccesfulResponse(response.ToString(), networkDataHelper);
         }
 
-        private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
+        private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
         {
             Console.WriteLine("Database.EditPublishedGame - Initiated");
 
-            // Recibir el nombre del juego a modificar
+            
             string gameName = ReceiveStringData(networkDataHelper);
             Game game = GameManager.GetGameByName(gameName);
 
-            // Validar que el juego existe y que el usuario es el publicador
+            
             if (game == null || !connectedUser.PublishedGames.Contains(game))
             {
                 SuccesfulResponse("Error: Game not found or you are not the publisher.", networkDataHelper);
@@ -462,7 +462,7 @@ namespace ServerApp
             bool modifying = true;
             while (modifying)
             {
-                // Esperar recibir un mensaje indicando si se modifica un campo o si se termina
+                
                 string action = ReceiveStringData(networkDataHelper);
 
                 if (action == "finishModification")
@@ -474,7 +474,7 @@ namespace ServerApp
 
                 if (action == "modifyField")
                 {
-                    // Recibir el campo a modificar y el nuevo valor
+                   
                     string field = ReceiveStringData(networkDataHelper);
                     string newValue = ReceiveStringData(networkDataHelper);
 
@@ -514,6 +514,18 @@ namespace ServerApp
                                     throw new ArgumentException("Invalid number format.");
                                 }
                                 break;
+                            // case "cover image":  // Comentado para evitar error de excepcion, logica implementada
+                            //     string imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{game.Name}.jpg");
+                            //     if (File.Exists(imagePath))
+                            //     {
+                            //         File.Delete(imagePath);
+                            //         Console.WriteLine("Existing cover image deleted.");
+                            //     }
+                            //     Console.WriteLine("Receiving new cover image...");
+                            //     var fileCommonHandler = new FileCommsHandler(socketClient);
+                            //     fileCommonHandler.ReceiveFile(game.Name);
+                            //     Console.WriteLine("New cover image received!");
+                            //     break;
                             default:
                                 throw new ArgumentException("Invalid field.");
                         }
@@ -527,6 +539,8 @@ namespace ServerApp
                 }
             }
         }
+
+
 
 
 

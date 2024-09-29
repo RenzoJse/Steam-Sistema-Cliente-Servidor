@@ -137,14 +137,14 @@ namespace ClientApp
             return SendAndReceiveMessageBool(message);
         }
         
-        private static void SendMessage(string message) // Con este metodo envias un mensaje al server sin recibir respuesta
+        private static void SendMessage(string message) 
         {
-            byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
-            byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
+            byte[] data = Encoding.UTF8.GetBytes(message); 
+            byte[] dataLength = BitConverter.GetBytes(data.Length); 
             try
             {
-                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
-                networkDataHelper.Send(data); // Envio el mensaje (parte variable));
+                networkDataHelper.Send(dataLength); 
+                networkDataHelper.Send(data); 
             }
             catch (SocketException)
             {
@@ -186,24 +186,24 @@ namespace ClientApp
         }
 
 
-        private static void ModifyGame()
+
+        private static void ModifyGame(Socket socketClient)
         {
             Console.Write("Enter the name of the game you want to modify: ");
             string gameName = Console.ReadLine();
-            SendMessage(gameName); // Enviar el nombre del juego al servidor
+            SendMessage(gameName); 
 
-            // Recibir la respuesta del servidor para validar si existe y si el usuario tiene permisos
+            
             string response = ReceiveMessage();
             if (response.Contains("Error"))
             {
                 Console.WriteLine(response);
-                return; // Si hay error, terminamos el proceso
+                return; 
             }
 
             bool modifying = true;
             while (modifying)
             {
-                // Desplegar el menú para elegir qué atributo modificar
                 Console.WriteLine("What attribute would you like to modify?");
                 Console.WriteLine("1. Title");
                 Console.WriteLine("2. Genre");
@@ -211,6 +211,7 @@ namespace ClientApp
                 Console.WriteLine("4. Platform");
                 Console.WriteLine("5. Publisher");
                 Console.WriteLine("6. Units Available");
+                // Console.WriteLine("7. Cover Image");  
                 Console.WriteLine("7. Finish");
 
                 string option = Console.ReadLine();
@@ -261,35 +262,47 @@ namespace ClientApp
                             newValue = Console.ReadLine();
                         }
                         break;
+                    // case "7":  // Comentado para evitar error de excpecion, logica implementada
+                    //     field = "cover image";
+                    //     SendMessage("deleteExistingCover");
+                    //     Console.WriteLine("Enter the full path of the file to send:");
+                    //     string abspath = Console.ReadLine();
+                    //     var fileCommonHandler = new FileCommsHandler(socketClient);
+                    //     fileCommonHandler.SendFile(abspath);
+                    //     Console.WriteLine("The new cover image has been sent to the server.");
+                    //     continue; 
                     case "7":
                         Console.WriteLine("Finished modifying.");
                         modifying = false;
+                        SendMessage("finishModification"); 
                         continue;
                     default:
                         Console.WriteLine("Invalid option. Please try again.");
                         continue;
                 }
 
-                // Enviar al servidor el campo y el nuevo valor
-                SendMessage("modifyField"); // Enviar una etiqueta clara de que se va a modificar un campo
+                
+                SendMessage("modifyField"); 
                 SendMessage(field);
                 SendMessage(newValue);
 
-                // Recibir respuesta del servidor sobre la modificación
+                
                 string modifyResponse = ReceiveMessage();
                 Console.WriteLine(modifyResponse);
 
-                // Preguntar al usuario si desea continuar modificando
+               
                 Console.WriteLine("Do you want to modify another attribute? (yes/no)");
                 string continueModifying = Console.ReadLine().ToLower();
                 if (continueModifying != "yes")
                 {
                     modifying = false;
-                    SendMessage("finishModification"); // Enviar señal clara de terminar la modificación
+                    SendMessage("finishModification");
                     Console.WriteLine("Finished modifying the game.");
                 }
             }
         }
+
+
 
 
 
@@ -515,7 +528,7 @@ namespace ClientApp
                             PublishGame(socketClient);
                             break;
                         case "6":
-                            ModifyGame();
+                            ModifyGame(socketClient);
                             break;
                         case "7":
                             DeleteGame();
