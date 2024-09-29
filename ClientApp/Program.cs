@@ -91,7 +91,9 @@ namespace ClientApp
                 Console.WriteLine("The file was sent to the server");
 
             }
+            Console.WriteLine("");
             Console.WriteLine("Game published successfully.");
+            Console.WriteLine("");
 
         }
         
