@@ -109,7 +109,7 @@ namespace ServerApp
                                     program.SearchGames(networkDataHelper);
                                     break;
                                 case "2":
-                                    program.ShowAllGameInformation(networkDataHelper);
+                                    program.ShowAllGameInformation(networkDataHelper, clientSocket);
                                     break;
                                 case "3":
                                     program.PurchaseGame(networkDataHelper, connectedUser);
@@ -227,7 +227,7 @@ namespace ServerApp
             return null;
         }
 
-        private void ShowAllGameInformation(NetworkDataHelper networkDataHelper)
+        private void ShowAllGameInformation(NetworkDataHelper networkDataHelper, Socket socketClient)
         {
             Console.WriteLine("Database.ShowAllGameInformation -Initiated");
             Console.WriteLine("Database.ShowAllGameInformation -Executing");
@@ -240,6 +240,13 @@ namespace ServerApp
             {
                 string response = game.ToString();
                 SuccesfulResponse(response, networkDataHelper);
+                
+                Console.WriteLine("Sending File...");
+                String abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.ImageName);
+                var fileCommonHandler = new FileCommsHandler(socketClient);
+                fileCommonHandler.SendFile(abspath);
+                Console.WriteLine("File Sent Successfully!");
+                
                 string option = ReceiveStringData(networkDataHelper);
                 if (option.Equals("yes"))
                 {
@@ -288,12 +295,11 @@ namespace ServerApp
             {
                 Console.WriteLine("Image incoming...");
                 var fileCommonHandler = new FileCommsHandler(socketClient);
-                fileCommonHandler.ReceiveFile();
+                fileCommonHandler.ReceiveFile(gameName);
                 Console.WriteLine("Image received!");
             }
 
             int valoration = 0;
-
             Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
                 connectedUser);
             GameManager.AddGame(newGame);
@@ -320,6 +326,8 @@ namespace ServerApp
                 UnitsAvailable = unitsAvailable,
                 Price = price,
                 Valoration = valoration,
+                Reviews = new List<Review>(),
+                ImageName = name
             };
         }
 

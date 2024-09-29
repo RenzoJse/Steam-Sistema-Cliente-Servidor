@@ -287,11 +287,18 @@ namespace ClientApp
             Console.WriteLine(ReceiveMessage());
         }
         
-        private static void MoreInfoGame()
+        private static void MoreInfoGame(Socket socketClient)
         {
             Console.WriteLine("Game Name: ");
             string gameName = Console.ReadLine();
             SendAndReceiveMessage(gameName);
+            Console.WriteLine("Reciving Game Photo On (Images Folder)");
+            
+            Console.WriteLine("Image incoming...");
+            var fileCommonHandler = new FileCommsHandler(socketClient);
+            fileCommonHandler.ReceiveFile(gameName);
+            Console.WriteLine("Image received!\n");
+            
             Console.WriteLine("Read Reviews? (yes/no)");
             string readReviews = Console.ReadLine();
             if ("yes".Equals(readReviews))
@@ -368,7 +375,7 @@ namespace ClientApp
                             SearchGames();
                             break;
                         case "2":
-                            MoreInfoGame();
+                            MoreInfoGame(socketClient);
                             break;
                         case "3":
                             Console.WriteLine("Titulo del juego a comprar: ");
