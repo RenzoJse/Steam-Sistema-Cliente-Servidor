@@ -24,6 +24,151 @@ namespace ServerApp
             return userManager;
         }
 
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Starting Server Application..");
+            var socketServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            string ipaddress = settingsMngr.ReadSettings(ServerConfig.serverIPConfigKey);
+            int port = int.Parse(settingsMngr.ReadSettings(ServerConfig.serverPortConfigKey));
+
+            var localEndpoint = new IPEndPoint(IPAddress.Parse(ipaddress), port); //Puerto va entre 0 y 65535
+            socketServer.Bind(localEndpoint);
+            socketServer.Listen(3); // Nuestro Socket pasa a estar en modo escucha
+            Console.WriteLine("Waiting for clients...");
+            // Hilo para manejar la entrada de la consola del servidor
+
+            Console.WriteLine("Type 'shutdown' to close the server");
+            new Thread(() =>
+            {
+                string command = Console.ReadLine();
+                if (command == "shutdown")
+                {
+                    foreach (var client in clientSockets)
+                    {
+                        client.Close();
+                    }
+
+                    socketServer.Close();
+                    serverRunning = false;
+                    Console.WriteLine("Server is shutting down...");
+                }
+            }).Start();
+
+            while (serverRunning)
+            {
+                try
+                {
+                    var programInstance = new Program();
+                    Socket
+                        clientSocket =
+                            socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                    clientSockets.Add(clientSocket);
+                    Console.WriteLine("Client connected");
+                    new Thread(() => HandleClient(clientSocket, programInstance))
+                        .Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Server has been shut down.");
+                }
+            }
+
+            //HILO QUE MANEJA LOS CLIENTES
+            static void HandleClient(Socket clientSocket, Program program)
+            {
+                bool clientIsConnected = true;
+                User connectedUser = null;
+                NetworkDataHelper networkDataHelper = new NetworkDataHelper(clientSocket);
+
+                while (clientIsConnected)
+                {
+                    try
+                    {
+                        while (connectedUser == null)
+                        {
+                            switch (protocolMessage(networkDataHelper))
+                            {
+                                case "1":
+                                    program.RegisterNewUser(networkDataHelper);
+                                    break;
+                                case "2":
+                                    connectedUser = program.LoginUser(networkDataHelper);
+                                    break;
+                                case "3":
+                                    clientIsConnected = false;
+                                    break;
+                            }
+                        }
+
+                        while (connectedUser != null)
+                        {
+                            switch (protocolMessage(networkDataHelper))
+                            {
+                                case "1":
+                                    program.SearchGames(networkDataHelper);
+                                    break;
+                                case "2":
+                                    program.ShowAllGameInformation(networkDataHelper);
+                                    break;
+                                case "3":
+                                    program.PurchaseGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "4":
+                                    program.ReviewGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "5":
+                                    program.PublishGame(networkDataHelper, connectedUser, clientSocket);
+                                    break;
+                                case "6":
+                                    if (connectedUser.PublishedGames.Count == 0)
+                                    {
+                                        string response = $"You Dont Own Any Game.";
+                                        byte[] responseData = Encoding.UTF8.GetBytes(response);
+                                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
+                                        networkDataHelper.Send(responseDataLength);
+                                        networkDataHelper.Send(responseData);
+                                    }
+                                    else
+                                    {
+                                        program.ShowPublishedGames(networkDataHelper, connectedUser);
+                                        program.EditPublishedGame(networkDataHelper, connectedUser);
+                                    }
+                                    break;
+                                case "7":
+                                    program.DeleteGame(networkDataHelper, connectedUser);
+                                    break;
+                                case "8":
+                                    connectedUser = null;
+                                    break;
+                            }
+                        }
+                    }
+                    catch (SocketException)
+                    {
+                        Console.WriteLine("Client disconnected");
+                        clientIsConnected = false;
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        string response = ex.Message;
+                        byte[] responseData = Encoding.UTF8.GetBytes(response);
+                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
+                        networkDataHelper.Send(responseDataLength);
+                        networkDataHelper.Send(responseData);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        string response = ex.Message;
+                        byte[] responseData = Encoding.UTF8.GetBytes(response);
+                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
+                        networkDataHelper.Send(responseDataLength);
+                        networkDataHelper.Send(responseData);
+                    }
+                }
+            }
+        }
+        
         private void RegisterNewUser(NetworkDataHelper networkDataHelper)
         {
             byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
@@ -95,6 +240,16 @@ namespace ServerApp
             {
                 string response = game.ToString();
                 SuccesfulResponse(response, networkDataHelper);
+                string option = ReceiveStringData(networkDataHelper);
+                if (option.Equals("yes"))
+                {
+                    StringBuilder reviews = new StringBuilder("Reviews:\n");
+                    foreach (var review in game.Reviews)
+                    {
+                        reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
+                    }
+                    SuccesfulResponse(reviews.ToString(), networkDataHelper);
+                }
             }
             else
             {
@@ -102,12 +257,11 @@ namespace ServerApp
             }
         }
 
-
         private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
         {
             Console.WriteLine("Database.PublishGame -Initiated");
             Console.WriteLine("Database.PublishGame -Executing");
-            
+
             string gameName = ReceiveStringData(networkDataHelper);
             bool gameExists = GameManager.DoesGameExist(gameName);
             while (gameExists)
@@ -120,22 +274,11 @@ namespace ServerApp
                     SuccesfulResponse("Succesful New Game Name", networkDataHelper);
                 }
             }
+
             SuccesfulResponse("Succesful New Game Name", networkDataHelper);
             string genre = ReceiveStringData(networkDataHelper);
             string releaseDateInput = ReceiveStringData(networkDataHelper);
-            DateTime releaseDate;
-            while (!DateTime.TryParse(releaseDateInput, out releaseDate))
-            {
-                SuccesfulResponse("Error: Invalid Date Format. Please enter a valid date.", networkDataHelper);
-                releaseDateInput = ReceiveStringData(networkDataHelper);
-                bool estado = DateTime.TryParse(releaseDateInput, out releaseDate);
-                if (estado)
-                {
-                    SuccesfulResponse("Succesful New Date", networkDataHelper);
-                }
-            }
-            SuccesfulResponse("Succesful New Date", networkDataHelper);
-
+            DateTime releaseDate = DateTime.Parse(releaseDateInput);
             string platform = ReceiveStringData(networkDataHelper);
             int unitsAvailable = int.Parse(ReceiveStringData(networkDataHelper));
             int price = int.Parse(ReceiveStringData(networkDataHelper));
@@ -143,13 +286,12 @@ namespace ServerApp
             SuccesfulResponse(variableSubida, networkDataHelper);
             if (variableSubida == "yes")
             {
-                Console.WriteLine("Antes de recibir el archivo");
+                Console.WriteLine("Image incoming...");
                 var fileCommonHandler = new FileCommsHandler(socketClient);
                 fileCommonHandler.ReceiveFile();
-                Console.WriteLine("Archivo recibido!!");
+                Console.WriteLine("Image received!");
             }
 
-            
             int valoration = 0;
 
             Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
@@ -157,16 +299,6 @@ namespace ServerApp
             GameManager.AddGame(newGame);
             connectedUser.PublishedGames.Add(newGame);
         }
-
-
-        
-
-
-
-
-
-
-
 
         private string ReceiveStringData(NetworkDataHelper networkDataHelper)
         {
@@ -200,8 +332,15 @@ namespace ServerApp
 
             if (GameManager.DoesGameExist(gameName))
             {
-                GameManager.RemoveGame(gameName);
-                SuccesfulResponse("Game deleted successfully.", networkDataHelper);
+                if (connectedUser.PublishedGames.Contains(GameManager.GetGameByName(gameName)))
+                {
+                    GameManager.RemoveGame(gameName);
+                    SuccesfulResponse("Game deleted successfully.", networkDataHelper);
+                }
+                else
+                {
+                    throw new InvalidOperationException("You are not the publisher of the game.");
+                }
             }
             else
             {
@@ -250,7 +389,7 @@ namespace ServerApp
                     break;
             }
         }
-        
+
         private void ShowAllGamesByValorations(NetworkDataHelper networkDataHelper)
         {
             string valoration = ReceiveStringData(networkDataHelper);
@@ -264,6 +403,7 @@ namespace ServerApp
             {
                 response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
             }
+
             SuccesfulResponse(response.ToString(), networkDataHelper);
         }
 
@@ -280,9 +420,10 @@ namespace ServerApp
             {
                 response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
             }
+
             SuccesfulResponse(response.ToString(), networkDataHelper);
         }
-        
+
         private void ShowAllGamesByPlatform(NetworkDataHelper networkDataHelper)
         {
             string platform = ReceiveStringData(networkDataHelper);
@@ -296,10 +437,11 @@ namespace ServerApp
             {
                 response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
             }
+
             SuccesfulResponse(response.ToString(), networkDataHelper);
         }
 
-    private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
+        private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             Console.WriteLine("Database.ShowPublishedGames -Initiated");
             Console.WriteLine("Database.ShowPublishedGames -Executing");
@@ -418,20 +560,34 @@ namespace ServerApp
                 }
             }
         }
-        
-        public void ReviewGame(NetworkDataHelper networkDataHelper)
+
+        public void ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             string gameName = ReceiveStringData(networkDataHelper);
             Game game = GameManager.GetGameByName(gameName);
             if (game == null)
             {
-                throw new InvalidOperationException("Game not found.");
+                throw new InvalidOperationException("Error: Game not found.");
             }
-            else
+            if (!connectedUser.PurchasedGames.Contains(game))
             {
-                int valoration = int.Parse(ReceiveStringData(networkDataHelper));
-                GameManager.AddValoration(gameName, valoration);
+                throw new InvalidOperationException("Error: You must purchase the game to review it.");
             }
+            SuccesfulResponse("Review Added Successfully", networkDataHelper);
+            string reviewText = ReceiveStringData(networkDataHelper);
+            if (string.IsNullOrEmpty(reviewText))
+            {
+                reviewText = "No review";
+            }
+            string valoration = ReceiveStringData(networkDataHelper);
+            Review review = new Review
+            {
+                Valoration = int.Parse(valoration),
+                Description = reviewText
+            };
+            game.Reviews.Add(review);
+            GameManager.AddValoration(gameName, int.Parse(valoration));
+            SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);
         }
 
         private void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
@@ -445,7 +601,8 @@ namespace ServerApp
         private static string protocolMessage(NetworkDataHelper networkDataHelper)
         {
             byte[] dataLength = networkDataHelper.Receive(largoDataLength); // Recibo la parte fija de los datos
-            byte[] data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
+            byte[] data =
+                networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
             Console.Write("Client says:");
             string message = Encoding.UTF8.GetString(data);
 
@@ -460,146 +617,5 @@ namespace ServerApp
             Console.WriteLine(message);
             return message;
         } // Este metodo recibe un mensaje del cliente y envia una respuesta exitosa
-
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Starting Server Application..");
-            var socketServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            string ipaddress = settingsMngr.ReadSettings(ServerConfig.serverIPConfigKey);
-            int port = int.Parse(settingsMngr.ReadSettings(ServerConfig.serverPortConfigKey));
-
-            var localEndpoint = new IPEndPoint(IPAddress.Parse(ipaddress), port); //Puerto va entre 0 y 65535
-            socketServer.Bind(localEndpoint);
-            socketServer.Listen(3); // Nuestro Socket pasa a estar en modo escucha
-            Console.WriteLine("Waiting for clients...");
-            // Hilo para manejar la entrada de la consola del servidor
-
-            Console.WriteLine("Type 'shutdown' to close the server");
-            new Thread(() =>
-            {
-                string command = Console.ReadLine();
-                if (command == "shutdown")
-                {
-                    foreach (var client in clientSockets)
-                    {
-                        client.Close();
-                    }
-
-                    socketServer.Close();
-                    serverRunning = false;
-                    Console.WriteLine("Server is shutting down...");
-                }
-            }).Start();
-
-            while (serverRunning)
-            {
-                try
-                {
-                    var programInstance = new Program();
-                    Socket clientSocket = socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
-                    clientSockets.Add(clientSocket);
-                    Console.WriteLine("Client connected");
-                    new Thread(() => HandleClient(clientSocket, programInstance)).Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Server has been shut down.");
-                }
-            }
-
-            //HILO QUE MANEJA LOS CLIENTES
-            static void HandleClient(Socket clientSocket, Program program)
-            {
-                bool clientIsConnected = true;
-                User connectedUser = null;
-                NetworkDataHelper networkDataHelper = new NetworkDataHelper(clientSocket);
-
-                while (clientIsConnected)
-                {
-                    try
-                    {
-                        while (connectedUser == null)
-                        {
-                            switch (protocolMessage(networkDataHelper))
-                            {
-                                case "1":
-                                    program.RegisterNewUser(networkDataHelper);
-                                    break;
-                                case "2":
-                                    connectedUser = program.LoginUser(networkDataHelper);
-                                    break;
-                                case "3":
-                                    clientIsConnected = false;
-                                    break;
-                            }
-                        }
-                        while (connectedUser != null)
-                        {
-                            switch (protocolMessage(networkDataHelper))
-                            {
-                                case "1":
-                                    program.SearchGames(networkDataHelper);
-                                    break;
-                                case "2":
-                                    program.ShowAllGameInformation(networkDataHelper);
-                                    break;
-                                case "3":
-                                    program.PurchaseGame(networkDataHelper, connectedUser);
-                                    break;
-                                case "4":
-                                    program.ReviewGame(networkDataHelper);
-                                    break;
-                                case "5":
-                                    program.PublishGame(networkDataHelper, connectedUser, clientSocket);
-                                    break;
-                                case "6":
-                                    if (connectedUser.PublishedGames.Count == 0)
-                                    {
-                                        string response = $"You Dont Own Any Game.";
-                                        byte[] responseData = Encoding.UTF8.GetBytes(response);
-                                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
-                                        networkDataHelper.Send(responseDataLength);
-                                        networkDataHelper.Send(responseData);
-                                    }
-                                    else
-                                    {
-                                        program.ShowPublishedGames(networkDataHelper, connectedUser);
-                                        program.EditPublishedGame(networkDataHelper, connectedUser);  
-                                    }
-                                    break;
-                                case "7":
-                                    program.DeleteGame(networkDataHelper, connectedUser);
-                                    break;
-                                case "8":
-                                    connectedUser = null;
-                                    break;
-                            }
-                        }
-                    }
-                    catch (SocketException)
-                    {
-                        Console.WriteLine("Client disconnected");
-                        clientIsConnected = false;
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        string response = ex.Message;
-                        byte[] responseData = Encoding.UTF8.GetBytes(response);
-                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
-                        networkDataHelper.Send(responseDataLength);
-                        networkDataHelper.Send(responseData);
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        string response = ex.Message;
-                        byte[] responseData = Encoding.UTF8.GetBytes(response);
-                        byte[] responseDataLength = BitConverter.GetBytes(responseData.Length);
-                        networkDataHelper.Send(responseDataLength);
-                        networkDataHelper.Send(responseData);
-                    }
-                }
-            }
-        }
     }
 }

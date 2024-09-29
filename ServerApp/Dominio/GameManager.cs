@@ -2,7 +2,7 @@
 {
     public class GameManager
     {
-        private List<Game> Games = new List<Game>();
+        private static List<Game> Games = new List<Game>();
         private static object _lock = new object();
 
         public GameManager()
@@ -18,7 +18,7 @@
             }
         }
 
-        public Game GetGameByName(string name)
+        public static Game GetGameByName(string name)
         {
             return Games.FirstOrDefault(g => g.Name == name);
         }
@@ -94,9 +94,9 @@
             }
         }
 
-        public void PreLoadedGames()
+        private void PreLoadedGames()
         {
-            Games.Add(new Game
+            Game fortnite = new Game
             {
                 Name = "Fornite",
                 Genre = "Action",
@@ -106,8 +106,10 @@
                 Valoration = 8,
                 Price = 10,
                 Platform = "PC"
-            });
-            Games.Add(new Game
+            };
+            Games.Add(fortnite);
+
+            Game roblox = new Game
             {
                 Name = "Roblox",
                 Genre = "Adventure",
@@ -117,8 +119,10 @@
                 Valoration = 6,
                 Price = 5,
                 Platform = "PC"
-            });
-            Games.Add(new Game
+            };
+            Games.Add(roblox);
+
+            Game minecraft = new Game
             {
                 Name = "Minecraft",
                 Genre = "Adventure",
@@ -128,8 +132,10 @@
                 Valoration = 10,
                 Price = 20,
                 Platform = "PC"
-            });
-            Games.Add(new Game
+            };
+            Games.Add(minecraft);
+
+            Game pokemonSword = new Game
             {
                 Name = "Pokemon Sword",
                 Genre = "Adventure",
@@ -139,8 +145,10 @@
                 Valoration = 9,
                 Price = 150,
                 Platform = "Nintendo Switch"
-            });
-            Games.Add(new Game
+            };
+            Games.Add(pokemonSword);
+
+            Game noMorePokemon = new Game
             {
                 Name = "NoMorePokemon",
                 Genre = "MMORPG",
@@ -150,8 +158,10 @@
                 Valoration = 2,
                 Price = 9,
                 Platform = "IOS"
-            });
-            Games.Add(new Game
+            };
+            Games.Add(noMorePokemon);
+
+            Game leagueOfLegends = new Game
             {
                 Name = "League of Legends",
                 Genre = "MOBA",
@@ -161,7 +171,8 @@
                 Valoration = 7,
                 Price = 0,
                 Platform = "PC"
-            });
+            };
+            Games.Add(leagueOfLegends);
         }
         
     }

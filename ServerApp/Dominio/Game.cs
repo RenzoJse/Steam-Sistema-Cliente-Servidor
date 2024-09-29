@@ -13,6 +13,12 @@ public class Game
     public int UnitsAvailable { get; set; }
     public int Valoration { get; set; }
     
+    public List<Review> Reviews { get; set; }
+    
+    public Game()
+    {
+        Reviews = new List<Review>();
+    }
     public override string ToString()
     {
         return $"Name: {Name}" +
