@@ -8,11 +8,18 @@ public class Game
     public string Publisher { get; set; }
     public string Platform { get; set; }
     public int Price { get; set; }
+    
     public string ImageName { get; set; }
     
     public int UnitsAvailable { get; set; }
     public int Valoration { get; set; }
     
+    public List<Review> Reviews { get; set; }
+    
+    public Game()
+    {
+        Reviews = new List<Review>();
+    }
     public override string ToString()
     {
         return $"Name: {Name}" +

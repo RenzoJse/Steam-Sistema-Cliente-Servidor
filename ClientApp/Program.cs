@@ -55,15 +55,14 @@ namespace ClientApp
 
             Console.Write("Enter the release date (dd/mm/yyyy):");
             string fechaLanzamiento = Console.ReadLine();
-            SendMessage(fechaLanzamiento);
-            string error2 = ReceiveMessage();
-            while (error2 == "Error: Invalid Date Format. Please enter a valid date.")
+            DateTime releaseDate;
+            while (!DateTime.TryParseExact(fechaLanzamiento, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out releaseDate))
             {
+                Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
                 Console.Write("Enter the release date (dd/mm/yyyy):");
                 fechaLanzamiento = Console.ReadLine();
-                SendMessage(fechaLanzamiento);
-                error2 = ReceiveMessage();
             }
+            SendMessage(fechaLanzamiento);
 
             Console.Write("Enter the platform:");
             string plataforma = Console.ReadLine();
@@ -174,10 +173,10 @@ namespace ClientApp
 
         private static void DeleteGame()
         {
-            Console.Write("Ingrese el nombre del juego a borrar: ");
+            Console.Write("Which Game Do You Want To Delete?: ");
             string gameName = Console.ReadLine();
             
-            SendMessage(gameName);
+            SendAndReceiveMessage(gameName);
         }
 
 
@@ -259,7 +258,7 @@ namespace ClientApp
                     SendAndReceiveMessage(valoration);
                     break;
                 case "4":
-                    SendAndReceiveMessage("5");
+                    ReceiveMessage();
                     break;
                 default:
                     Console.WriteLine("Invalid option. Please try again.");
@@ -267,20 +266,48 @@ namespace ClientApp
             }
         }
         
-        private static void ValorateGame() // DEBERIAMOS PONER UN WHILE PARA QUE EL JUEGO EXISTA. TIENE Q ESTAR COMPRADO.
+        private static void ReviewGame()
         {
-            Console.Write("Ingrese el nombre del juego a valorar: ");
+            Console.Write("Which Game Do You Want To Review? : ");
             string gameName = Console.ReadLine();
             SendMessage(gameName);
-
-            Console.Write("Ingrese la valoración (0-10): ");
-            string valoracion = Console.ReadLine();
-            while (!int.TryParse(valoracion, out int val) || val < 1 || val > 10)
+            string response = ReceiveMessage();
+            if (!response.Contains("Error"))
             {
-                Console.Write("Valoración inválida. Ingrese una valoración entre 1 y 10: ");
-                valoracion = Console.ReadLine();
+                Console.Write("Write an opinion about the game: ");
+                string reviewText = Console.ReadLine();
+                SendMessage(reviewText);
+                Console.Write("How Would You Rate It? (0-10): ");
+                string valoration = Console.ReadLine();
+                while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
+                {
+                    Console.Write("Invalid valoration. Please enter a number between 1 and 10: ");
+                    valoration = Console.ReadLine();
+                }
+                SendMessage(valoration);
             }
-            SendMessage(valoracion);
+            Console.WriteLine(ReceiveMessage());
+        }
+        
+        private static void MoreInfoGame(Socket socketClient)
+        {
+            Console.WriteLine("Game Name: ");
+            string gameName = Console.ReadLine();
+            SendAndReceiveMessage(gameName);
+            Console.WriteLine("Reciving Game Photo On (Images Folder)");
+            
+            Console.WriteLine("Image incoming...");
+            var fileCommonHandler = new FileCommsHandler(socketClient);
+            fileCommonHandler.ReceiveFile(gameName);
+            Console.WriteLine("Image received!\n");
+            
+            Console.WriteLine("Read Reviews? (yes/no)");
+            string readReviews = Console.ReadLine();
+            if ("yes".Equals(readReviews))
+            {
+                SendAndReceiveMessage(readReviews);  
+            }
+            Console.WriteLine("\n");
         }
         
         static void Main(string[] args)
@@ -350,9 +377,7 @@ namespace ClientApp
                             SearchGames();
                             break;
                         case "2":
-                            Console.WriteLine("Game Name: ");
-                            string gameName = Console.ReadLine();
-                            SendAndReceiveMessage(gameName);
+                            MoreInfoGame(socketClient);
                             break;
                         case "3":
                             Console.WriteLine("Titulo del juego a comprar: ");
@@ -360,7 +385,7 @@ namespace ClientApp
                             SendAndReceiveMessage(gamePurchase);
                             break;
                         case "4":
-                            ValorateGame();
+                            ReviewGame();
                             break;
                         case "5":
                             PublishGame(socketClient);

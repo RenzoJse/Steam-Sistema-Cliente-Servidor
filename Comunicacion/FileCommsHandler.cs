@@ -47,8 +47,13 @@ namespace Communication
             }
         }
 
-        public void ReceiveFile()
+        public void ReceiveFile(string gameName)
         {
+            string imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+            if (!Directory.Exists(imagesDirectory))
+            {
+                Directory.CreateDirectory(imagesDirectory);
+            }
             // ---> Recibir el largo del nombre del archivo
             int fileNameSize = _conversionHandler.ConvertBytesToInt(
                 _socketHelper.Receive(Protocol.FixedDataSize));
@@ -57,8 +62,12 @@ namespace Communication
             // ---> Recibir el largo del archivo
             long fileSize = _conversionHandler.ConvertBytesToLong(
                 _socketHelper.Receive(Protocol.FixedFileSize));
+                
+            // Construct the full file path with the game name
+            string filePath = Path.Combine(imagesDirectory, $"{gameName}.jpg");
+            
             // ---> Recibir el archivo
-            ReceiveFileWithStreams(fileSize, fileName);
+            ReceiveFileWithStreams(fileSize, filePath);
         }
 
         private void SendFileWithStream(long fileSize, string path)
