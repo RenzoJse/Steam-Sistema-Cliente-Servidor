@@ -12,7 +12,7 @@ namespace ServerApp
     internal class Program
     {
         static readonly SettingsManager settingsMngr = new SettingsManager();
-        static readonly UserManager userManager = new UserManager();
+        static readonly UserManager UserManager = new UserManager();
         static readonly GameManager GameManager = new GameManager();
         static List<Socket> clientSockets = new List<Socket>();
         const int largoDataLength = 4; // Pasar a una clase con constantes del protocolo
@@ -21,7 +21,7 @@ namespace ServerApp
 
         public static UserManager getInstance()
         {
-            return userManager;
+            return UserManager;
         }
 
         static void Main(string[] args)
@@ -190,7 +190,7 @@ namespace ServerApp
 
             Console.WriteLine("Database.RegisterNewUser -Initiated");
             Console.WriteLine("Database.RegisterNewUser -Executing");
-            if (userManager.RegisterUser(username, password))
+            if (UserManager.RegisterUser(username, password))
             {
                 Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
                 SuccesfulResponse("User registered successfully", networkDataHelper);
@@ -212,7 +212,7 @@ namespace ServerApp
 
             Console.WriteLine("Database.LoginUser -Initiated");
             Console.WriteLine("Database.LoginUser -Executing");
-            User user = userManager.AuthenticateUser(username, password);
+            User user = UserManager.AuthenticateUser(username, password);
             if (user != null)
             {
                 SuccesfulResponse("Login successful", networkDataHelper);
@@ -300,10 +300,8 @@ namespace ServerApp
             }
 
             int valoration = 0;
-            Game newGame = CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration,
-                connectedUser);
-            GameManager.AddGame(newGame);
-            connectedUser.PublishedGames.Add(newGame);
+            Game newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration, connectedUser);
+            UserManager.PublishGame(newGame, connectedUser);
         }
 
         private string ReceiveStringData(NetworkDataHelper networkDataHelper)
@@ -312,38 +310,27 @@ namespace ServerApp
             byte[] data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength));
             return Encoding.UTF8.GetString(data);
         }
-
-        private Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
-            int price, int valoration, User owner)
-        {
-            return new Game
-            {
-                Name = name,
-                Genre = genre,
-                ReleaseDate = releaseDate,
-                Platform = platform,
-                Publisher = owner.Username,
-                UnitsAvailable = unitsAvailable,
-                Price = price,
-                Valoration = valoration,
-                Reviews = new List<Review>(),
-                ImageName = name
-            };
-        }
-
+        
         private void DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
-
-
+            
             if (GameManager.DoesGameExist(gameName))
             {
                 if (connectedUser.PublishedGames.Contains(GameManager.GetGameByName(gameName)))
                 {
                     GameManager.RemoveGame(gameName);
-                    SuccesfulResponse("Game deleted successfully.", networkDataHelper);
+    
+                    // Delete the image file
+                    string imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{gameName}.jpg");
+                    if (File.Exists(imagePath))
+                    {
+                        File.Delete(imagePath);
+                    }
+    
+                    SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
                 }
                 else
                 {
@@ -537,8 +524,7 @@ namespace ServerApp
 
         private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
-            lock (this)
-            {
+
                 byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
                 byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
                 string gameName = Encoding.UTF8.GetString(gameNameData);
@@ -556,7 +542,7 @@ namespace ServerApp
 
                 Console.WriteLine("Database.PurchaseGame -Initiated");
                 Console.WriteLine("Database.PurchaseGame -Executing");
-                if (userManager.PurchaseGame(game, connectedUser))
+                if (UserManager.PurchaseGame(game, connectedUser))
                 {
                     GameManager.DiscountPurchasedGame(game);
                     Console.WriteLine("Database.PurchaseGame - El juego: " + game.Name + " ha sido comprado");
@@ -566,7 +552,6 @@ namespace ServerApp
                 {
                     throw new InvalidOperationException("Error al comprar el juego.");
                 }
-            }
         }
 
         public void ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
@@ -593,7 +578,7 @@ namespace ServerApp
                 Valoration = int.Parse(valoration),
                 Description = reviewText
             };
-            game.Reviews.Add(review);
+            GameManager.AddReview(gameName, review);
             GameManager.AddValoration(gameName, int.Parse(valoration));
             SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);
         }

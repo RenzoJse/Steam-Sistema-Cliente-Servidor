@@ -171,7 +171,7 @@ namespace ClientApp
 
         private static void DeleteGame()
         {
-            Console.Write("Ingrese el nombre del juego a borrar: ");
+            Console.Write("Which Game Do You Want To Delete?: ");
             string gameName = Console.ReadLine();
             
             SendAndReceiveMessage(gameName);

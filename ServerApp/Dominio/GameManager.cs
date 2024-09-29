@@ -9,6 +9,29 @@
         {
             PreLoadedGames();
         }
+
+        public Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
+            int price, int valoration, User owner)
+        {
+            lock(_lock)
+            {
+                Game newGame = new Game
+                {
+                    Name = name,
+                    Genre = genre,
+                    ReleaseDate = releaseDate,
+                    Platform = platform,
+                    Publisher = owner.Username,
+                    UnitsAvailable = unitsAvailable,
+                    Price = price,
+                    Valoration = valoration,
+                    Reviews = new List<Review>(),
+                    ImageName = name
+                };
+                Games.Add(newGame);
+                return newGame;
+            }
+        }
         
         public List<Game> GetAllGames()
         {
@@ -43,16 +66,13 @@
             }
         }
 
-        
-
         public void DiscountPurchasedGame(Game game)
         {
             lock (_lock)
             {
                 Game gamePurchased = Games.FirstOrDefault(g => g.Name == game.Name);
 
-                if (gamePurchased != null)
-                    gamePurchased.UnitsAvailable--;
+                if (gamePurchased != null) gamePurchased.UnitsAvailable--;
             }
         }
 
@@ -75,22 +95,35 @@
                 }
             }
         }
+        
+        public void AddReview(string name, Review review)
+        {
+            lock (_lock)
+            {
+                var game = GetGameByName(name);
+                if (game != null)
+                {
+                    game.Reviews.Add(review);
+                }
+            }
+        }
 
         public List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
         {
             lock (_lock)
             {
                 return Games.Where(g =>
-                {
-                    var property = typeof(Game).GetProperty(attributeName);
-                    if (property != null)
                     {
-                        var value = property.GetValue(g)?.ToString();
-                        return value != null && value.Contains(attributeValue, StringComparison.OrdinalIgnoreCase);
-                    }
+                        var property = typeof(Game).GetProperty(attributeName);
+                        if (property != null)
+                        {
+                            var value = property.GetValue(g)?.ToString();
+                            return value != null && value.Contains(attributeValue, StringComparison.OrdinalIgnoreCase);
+                        }
 
-                    return false;
-                }).ToList();
+                        return false;
+                    })
+                    .ToList();
             }
         }
 
@@ -174,6 +207,5 @@
             };
             Games.Add(leagueOfLegends);
         }
-        
     }
 }

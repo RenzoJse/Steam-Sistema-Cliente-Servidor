@@ -68,6 +68,26 @@ namespace Comunicacion.Dominio
             }
         }
         
+        public void PublishGame(Game game, User user)
+        {
+            lock (_lock)
+            {
+                if (game is null || user is null)
+                {
+                    return;
+                }
+
+                User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
+
+                if (activeUser is null) //si el usuario no existe
+                {
+                    return;
+                }
+
+                activeUser.PublishedGames.Add(game);
+            }
+        }
+        
         private void PreLoadedUsers()
         { 
             var admin = new User
