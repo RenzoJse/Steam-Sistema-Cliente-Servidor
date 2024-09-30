@@ -17,7 +17,7 @@ namespace ServerApp
         static List<Socket> clientSockets = new List<Socket>();
         const int largoDataLength = 4; // Pasar a una clase con constantes del protocolo
         static bool serverRunning = true;
-        private static object _lock = new object();
+        //private static object _lock = new object();
 
         public static UserManager getInstance()
         {
@@ -121,7 +121,7 @@ namespace ServerApp
                                     program.PublishGame(networkDataHelper, connectedUser, clientSocket);
                                     break;
                                 case "6":
-                                    program.EditPublishedGame(networkDataHelper, connectedUser,clientSocket);
+                                    program.EditPublishedGame(networkDataHelper, connectedUser, clientSocket);
                                     break;
                                 case "7":
                                     program.DeleteGame(networkDataHelper, connectedUser);
@@ -156,7 +156,7 @@ namespace ServerApp
                 }
             }
         }
-        
+
         private void RegisterNewUser(NetworkDataHelper networkDataHelper)
         {
             byte[] usernameLength = networkDataHelper.Receive(largoDataLength);
@@ -228,13 +228,13 @@ namespace ServerApp
             {
                 string response = game.ToString();
                 SuccesfulResponse(response, networkDataHelper);
-                
+
                 Console.WriteLine("Sending File...");
                 String abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.ImageName);
                 var fileCommonHandler = new FileCommsHandler(socketClient);
                 fileCommonHandler.SendFile(abspath);
                 Console.WriteLine("File Sent Successfully!");
-                
+
                 string option = ReceiveStringData(networkDataHelper);
                 if (option.Equals("yes"))
                 {
@@ -243,6 +243,7 @@ namespace ServerApp
                     {
                         reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
                     }
+
                     SuccesfulResponse(reviews.ToString(), networkDataHelper);
                 }
             }
@@ -288,7 +289,8 @@ namespace ServerApp
             }
 
             int valoration = 0;
-            Game newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration, connectedUser);
+            Game newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price,
+                valoration, connectedUser);
             UserManager.PublishGame(newGame, connectedUser);
         }
 
@@ -298,26 +300,26 @@ namespace ServerApp
             byte[] data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength));
             return Encoding.UTF8.GetString(data);
         }
-        
+
         private void DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             byte[] gameNameLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
             string gameName = Encoding.UTF8.GetString(gameNameData);
-            
+
             if (GameManager.DoesGameExist(gameName))
             {
                 if (connectedUser.PublishedGames.Contains(GameManager.GetGameByName(gameName)))
                 {
                     GameManager.RemoveGame(gameName);
-    
+
                     // Delete the image file
                     string imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{gameName}.jpg");
                     if (File.Exists(imagePath))
                     {
                         File.Delete(imagePath);
                     }
-    
+
                     SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
                 }
                 else
@@ -446,11 +448,9 @@ namespace ServerApp
         {
             Console.WriteLine("Database.EditPublishedGame - Initiated");
 
-            
             string gameName = ReceiveStringData(networkDataHelper);
             Game game = GameManager.GetGameByName(gameName);
 
-            
             if (game == null || !connectedUser.PublishedGames.Contains(game))
             {
                 SuccesfulResponse("Error: Game not found or you are not the publisher.", networkDataHelper);
@@ -462,7 +462,6 @@ namespace ServerApp
             bool modifying = true;
             while (modifying)
             {
-                
                 string action = ReceiveStringData(networkDataHelper);
 
                 if (action == "finishModification")
@@ -474,7 +473,6 @@ namespace ServerApp
 
                 if (action == "modifyField")
                 {
-                   
                     string field = ReceiveStringData(networkDataHelper);
                     string newValue = ReceiveStringData(networkDataHelper);
 
@@ -529,7 +527,6 @@ namespace ServerApp
                             default:
                                 throw new ArgumentException("Invalid field.");
                         }
-
                         SuccesfulResponse("Game edited successfully", networkDataHelper);
                     }
                     catch (ArgumentException ex)
@@ -539,11 +536,6 @@ namespace ServerApp
                 }
             }
         }
-
-
-
-
-
 
         private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
@@ -576,7 +568,6 @@ namespace ServerApp
             }
         }
 
-
         public void ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
         {
             string gameName = ReceiveStringData(networkDataHelper);
@@ -585,22 +576,21 @@ namespace ServerApp
             {
                 throw new InvalidOperationException("Error: Game not found.");
             }
+
             if (!connectedUser.PurchasedGames.Contains(game))
             {
                 throw new InvalidOperationException("Error: You must purchase the game to review it.");
             }
+
             SuccesfulResponse("Review Added Successfully", networkDataHelper);
             string reviewText = ReceiveStringData(networkDataHelper);
             if (string.IsNullOrEmpty(reviewText))
             {
                 reviewText = "No review";
             }
+
             string valoration = ReceiveStringData(networkDataHelper);
-            Review review = new Review
-            {
-                Valoration = int.Parse(valoration),
-                Description = reviewText
-            };
+            Review review = new Review { Valoration = int.Parse(valoration), Description = reviewText };
             GameManager.AddReview(gameName, review);
             GameManager.AddValoration(gameName, int.Parse(valoration));
             SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);

@@ -8,14 +8,13 @@ using Communication;
 
 namespace ClientApp
 {
-
     internal class Program
     {
         static readonly SettingsManager settingsMngr = new SettingsManager();
         static NetworkDataHelper networkDataHelper;
-        
+
         static bool clientRunning = false;
-        
+
         private static void LoginMenu()
         {
             Console.WriteLine("1. Register");
@@ -56,12 +55,14 @@ namespace ClientApp
             Console.Write("Enter the release date (dd/mm/yyyy):");
             string fechaLanzamiento = Console.ReadLine();
             DateTime releaseDate;
-            while (!DateTime.TryParseExact(fechaLanzamiento, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out releaseDate))
+            while (!DateTime.TryParseExact(fechaLanzamiento, "dd/MM/yyyy", null,
+                       System.Globalization.DateTimeStyles.None, out releaseDate))
             {
                 Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
                 Console.Write("Enter the release date (dd/mm/yyyy):");
                 fechaLanzamiento = Console.ReadLine();
             }
+
             SendMessage(fechaLanzamiento);
 
             Console.Write("Enter the platform:");
@@ -77,6 +78,7 @@ namespace ClientApp
                 Console.Write("Enter the number of units available:");
                 unidadesDisponibles = Console.ReadLine();
             }
+
             SendMessage(unidadesDisponibles);
 
             Console.Write("Enter the price:");
@@ -88,10 +90,11 @@ namespace ClientApp
                 Console.Write("Enter the price:");
                 precio = Console.ReadLine();
             }
+
             SendMessage(precio);
 
             Console.Write("Do you want to upload a cover image? (yes/no)");
-            string variableSubida= Console.ReadLine();
+            string variableSubida = Console.ReadLine();
             SendMessage(variableSubida);
 
             string vairableSubida2 = ReceiveMessage();
@@ -102,32 +105,31 @@ namespace ClientApp
                 var fileCommonHandler = new FileCommsHandler(socketClient);
                 fileCommonHandler.SendFile(abspath);
                 Console.WriteLine("The file was sent to the server");
-
             }
+
             Console.WriteLine("");
             Console.WriteLine("Game published successfully.");
             Console.WriteLine("");
-
         }
-        
+
         private static void RegisterUser()
         {
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
-            
+
             SendMessage(username);
             SendAndReceiveMessage(password);
         }
-        
+
         private static bool Login()
         {
             Console.Write("Enter username: ");
             string username = Console.ReadLine();
             Console.Write("Enter password: ");
             string password = Console.ReadLine();
-            
+
             SendMessage(username);
             return SendAndReceiveMessageBool(password);
         }
@@ -136,33 +138,34 @@ namespace ClientApp
         {
             return SendAndReceiveMessageBool(message);
         }
-        
-        private static void SendMessage(string message) 
+
+        private static void SendMessage(string message)
         {
-            byte[] data = Encoding.UTF8.GetBytes(message); 
-            byte[] dataLength = BitConverter.GetBytes(data.Length); 
+            byte[] data = Encoding.UTF8.GetBytes(message);
+            byte[] dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength); 
-                networkDataHelper.Send(data); 
+                networkDataHelper.Send(dataLength);
+                networkDataHelper.Send(data);
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
                 clientRunning = false;
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
             }
         }
-        
+
         private static bool SendAndReceiveMessageBool(string message)
         {
-            byte[] data = Encoding.UTF8.GetBytes(message); 
+            byte[] data = Encoding.UTF8.GetBytes(message);
             byte[] dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength); 
+                networkDataHelper.Send(dataLength);
                 networkDataHelper.Send(data);
 
                 // RECIBO DEL SERVER
@@ -170,7 +173,7 @@ namespace ClientApp
                 byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 string response = Encoding.UTF8.GetString(responseData);
                 Console.WriteLine($"Server says: {response}");
-                
+
                 return response is "Login successful" or "True";
             }
             catch (SocketException)
@@ -178,27 +181,25 @@ namespace ClientApp
                 Console.WriteLine("Connection with the server has been interrupted");
                 clientRunning = false;
                 return false;
-            }catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
                 return false;
             }
         }
 
-
-
         private static void ModifyGame(Socket socketClient)
         {
             Console.Write("Enter the name of the game you want to modify: ");
             string gameName = Console.ReadLine();
-            SendMessage(gameName); 
+            SendMessage(gameName);
 
-            
             string response = ReceiveMessage();
             if (response.Contains("Error"))
             {
                 Console.WriteLine(response);
-                return; 
+                return;
             }
 
             bool modifying = true;
@@ -211,7 +212,7 @@ namespace ClientApp
                 Console.WriteLine("4. Platform");
                 Console.WriteLine("5. Publisher");
                 Console.WriteLine("6. Units Available");
-                // Console.WriteLine("7. Cover Image");  
+                // Console.WriteLine("7. Cover Image");
                 Console.WriteLine("7. Finish");
 
                 string option = Console.ReadLine();
@@ -235,11 +236,13 @@ namespace ClientApp
                         Console.Write("Enter new release date (dd/mm/yyyy): ");
                         newValue = Console.ReadLine();
                         DateTime releaseDate;
-                        while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out releaseDate))
+                        while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null,
+                                   System.Globalization.DateTimeStyles.None, out releaseDate))
                         {
                             Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
                             newValue = Console.ReadLine();
                         }
+
                         break;
                     case "4":
                         field = "platform";
@@ -261,6 +264,7 @@ namespace ClientApp
                             Console.WriteLine("Invalid input. Please enter a valid integer for units available.");
                             newValue = Console.ReadLine();
                         }
+
                         break;
                     // case "7":  // Comentado para evitar error de excpecion, logica implementada
                     //     field = "cover image";
@@ -270,27 +274,24 @@ namespace ClientApp
                     //     var fileCommonHandler = new FileCommsHandler(socketClient);
                     //     fileCommonHandler.SendFile(abspath);
                     //     Console.WriteLine("The new cover image has been sent to the server.");
-                    //     continue; 
+                    //     continue;
                     case "7":
                         Console.WriteLine("Finished modifying.");
                         modifying = false;
-                        SendMessage("finishModification"); 
+                        SendMessage("finishModification");
                         continue;
                     default:
                         Console.WriteLine("Invalid option. Please try again.");
                         continue;
                 }
 
-                
-                SendMessage("modifyField"); 
+                SendMessage("modifyField");
                 SendMessage(field);
                 SendMessage(newValue);
 
-                
                 string modifyResponse = ReceiveMessage();
                 Console.WriteLine(modifyResponse);
 
-               
                 Console.WriteLine("Do you want to modify another attribute? (yes/no)");
                 string continueModifying = Console.ReadLine().ToLower();
                 if (continueModifying != "yes")
@@ -302,20 +303,13 @@ namespace ClientApp
             }
         }
 
-
-
-
-
-
-
         private static void DeleteGame()
         {
             Console.Write("Which Game Do You Want To Delete?: ");
             string gameName = Console.ReadLine();
-            
+
             SendAndReceiveMessage(gameName);
         }
-
 
         private static void SendAndReceiveMessage(string message)
         {
@@ -336,12 +330,13 @@ namespace ClientApp
             {
                 Console.WriteLine("Connection with the server has been interrupted");
                 clientRunning = false;
-            }catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
             }
         }
-        
+
         private static string ReceiveMessage()
         {
             try
@@ -356,14 +351,16 @@ namespace ClientApp
             {
                 Console.WriteLine("Connection with the server has been interrupted");
                 clientRunning = false;
-            }catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
                 return "Error: " + e.Message;
             }
+
             return null;
         }
-        
+
         private static void SearchGames()
         {
             Console.WriteLine("1. Search by genre");
@@ -392,6 +389,7 @@ namespace ClientApp
                         Console.WriteLine("Invalid valoration. Please enter a number between 1 and 10.");
                         valoration = Console.ReadLine();
                     }
+
                     SendAndReceiveMessage(valoration);
                     break;
                 case "4":
@@ -402,7 +400,7 @@ namespace ClientApp
                     break;
             }
         }
-        
+
         private static void ReviewGame()
         {
             Console.Write("Which Game Do You Want To Review? : ");
@@ -421,32 +419,42 @@ namespace ClientApp
                     Console.Write("Invalid valoration. Please enter a number between 1 and 10: ");
                     valoration = Console.ReadLine();
                 }
+
                 SendMessage(valoration);
             }
+
             Console.WriteLine(ReceiveMessage());
         }
-        
+
         private static void MoreInfoGame(Socket socketClient)
         {
             Console.WriteLine("Game Name: ");
             string gameName = Console.ReadLine();
             SendAndReceiveMessage(gameName);
             Console.WriteLine("Reciving Game Photo On (Images Folder)");
-            
+
             Console.WriteLine("Image incoming...");
             var fileCommonHandler = new FileCommsHandler(socketClient);
             fileCommonHandler.ReceiveFile(gameName);
             Console.WriteLine("Image received!\n");
-            
+
             Console.WriteLine("Read Reviews? (yes/no)");
             string readReviews = Console.ReadLine();
             if ("yes".Equals(readReviews))
             {
-                SendAndReceiveMessage(readReviews);  
+                SendAndReceiveMessage(readReviews);
             }
+
             Console.WriteLine("\n");
         }
-        
+
+        private static void BuyGame()
+        {
+            Console.WriteLine("Which Game Do You Want To Buy: ");
+            string gamePurchase = Console.ReadLine();
+            SendAndReceiveMessage(gamePurchase);
+        }
+
         static void Main(string[] args)
         {
             Console.WriteLine("Starting Client Application..");
@@ -456,7 +464,6 @@ namespace ClientApp
             string ipClient = settingsMngr.ReadSettings(ClientConfig.clientIPConfigKey);
             int serverPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.serverPortConfigKey));
             int clientPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.clientPortConfigKey));
-
 
             var localEndpoint = new IPEndPoint(IPAddress.Parse(ipClient), clientPort);
             var remoteEndpoint = new IPEndPoint(IPAddress.Parse(ipServer), serverPort);
@@ -468,7 +475,7 @@ namespace ClientApp
             clientRunning = true;
 
             networkDataHelper = new NetworkDataHelper(socketClient);
-            
+
             bool userConnected = false;
             while (clientRunning)
             {
@@ -478,11 +485,11 @@ namespace ClientApp
                     string option = Console.ReadLine();
                     SendAndReceiveMessage(option);
 
-                    if (!clientRunning) 
+                    if (!clientRunning)
                     {
                         break;
                     }
-                    
+
                     switch (option)
                     {
                         case "1":
@@ -517,9 +524,7 @@ namespace ClientApp
                             MoreInfoGame(socketClient);
                             break;
                         case "3":
-                            Console.WriteLine("Titulo del juego a comprar: ");
-                            string gamePurchase = Console.ReadLine();
-                            SendAndReceiveMessage(gamePurchase);
+                            BuyGame();
                             break;
                         case "4":
                             ReviewGame();
@@ -541,8 +546,8 @@ namespace ClientApp
                             break;
                     }
                 }
-                
             }
+
             Console.WriteLine("Will Close Connection...");
             socketClient.Shutdown(SocketShutdown.Both);
             socketClient.Close();
