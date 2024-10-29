@@ -422,25 +422,43 @@ namespace ClientApp
             Console.WriteLine(ReceiveMessage());
         }
 
-        private static async Task MoreInfoGame(TcpClient client)
+        private static async Task MoreInfoGame(TcpClient socketClient)
         {
             Console.WriteLine("Game Name: ");
             string gameName = Console.ReadLine()!;
             await SendAndReceiveMessage(gameName);
-            Console.WriteLine("Receiving Game Photo On (Images Folder)");
 
-            Console.WriteLine("Image incoming...");
-            var fileCommonHandler = new FileCommsHandler(client);
-            await fileCommonHandler.ReceiveFile(gameName);
-            Console.WriteLine("Image received!\n");
+            Console.WriteLine("Receiving Game Photo (Images Folder)");
+
+            var fileCommonHandler = new FileCommsHandler(socketClient);
+
+            // Recibe el mensaje del servidor sobre la disponibilidad de la imagen
+            string response = await ReceiveMessage();
+
+            if (response == "No image available")
+            {
+                Console.WriteLine("No image available for this game.\n");
+            }
+            else
+            {
+                Console.WriteLine("Image incoming...");
+                try
+                {
+                    await fileCommonHandler.ReceiveFile(gameName); // Recibe el archivo de manera asíncrona
+                    Console.WriteLine("Image received successfully!\n");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error receiving image: " + ex.Message + "\n");
+                }
+            }
 
             Console.WriteLine("Read Reviews? (yes/no)");
             string readReviews = Console.ReadLine()!;
-            await SendAndReceiveMessage(readReviews);
-
-            if ("yes".Equals(readReviews))
+            if ("yes".Equals(readReviews, StringComparison.OrdinalIgnoreCase))
             {
-                string reviews = await ReceiveMessage();
+                await SendAndReceiveMessage(readReviews); // Enviar y recibir la confirmación para leer reseñas
+                string reviews = await ReceiveMessage();   // Recibe las reseñas del servidor
                 Console.WriteLine(reviews);
             }
 
@@ -449,6 +467,7 @@ namespace ClientApp
             // Muestra el menú de opciones después de terminar
             LoggedInMenu();
         }
+
 
         private static async Task BuyGame()
         {

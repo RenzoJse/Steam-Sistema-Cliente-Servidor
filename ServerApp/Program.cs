@@ -239,6 +239,7 @@ internal class Program
     {
         Console.WriteLine("Database.ShowAllGameInformation -Initiated");
         Console.WriteLine("Database.ShowAllGameInformation -Executing");
+
         var gameIdLengthData = await networkDataHelper.Receive(LargoDataLength);
         var gameIdLength = BitConverter.ToInt32(gameIdLengthData);
         var gameIdData = await networkDataHelper.Receive(gameIdLength);
@@ -250,37 +251,34 @@ internal class Program
             var response = game.ToString();
             await SuccesfulResponse(response, networkDataHelper);
 
-            Console.WriteLine("Sending File...");
-            try
-            {
-                var abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.Name + ".jpg");
-                if (!File.Exists(abspath))
-                {
-                    Console.WriteLine($"File does not exist at path: {abspath}");
-                    return;
-                }
+            Console.WriteLine("Checking if image file exists...");
+            var abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.Name + ".jpg");
 
+            if (File.Exists(abspath))
+            {
+                Console.WriteLine("Sending File...");
                 var fileCommonHandler = new FileCommsHandler(socketClient);
                 await fileCommonHandler.SendFile(abspath);
                 Console.WriteLine("File Sent Successfully!");
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Error sending file: {ex.Message}");
+                Console.WriteLine("Image file not found, skipping file send.");
+                await SuccesfulResponse("No image available", networkDataHelper); // Envía el mensaje al cliente
             }
 
             var option = await ReceiveStringData(networkDataHelper);
             switch (option)
             {
                 case "yes":
-                {
                     var reviews = new StringBuilder("Reviews:\n");
                     foreach (var review in game.Reviews)
+                    {
                         reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
-
+                    }
                     await SuccesfulResponse(reviews.ToString(), networkDataHelper);
                     break;
-                }
+
                 case "no":
                     await SuccesfulResponse("Enjoy your game info!", networkDataHelper);
                     break;
@@ -291,6 +289,7 @@ internal class Program
             throw new InvalidOperationException("Game not found.");
         }
     }
+
 
     private async Task PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
     {
