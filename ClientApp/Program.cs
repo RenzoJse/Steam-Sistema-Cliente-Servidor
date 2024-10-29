@@ -431,22 +431,46 @@ namespace ClientApp
             Console.WriteLine("Game Name: ");
             string gameName = Console.ReadLine();
             SendAndReceiveMessage(gameName);
-            Console.WriteLine("Reciving Game Photo On (Images Folder)");
 
-            Console.WriteLine("Image incoming...");
+            Console.WriteLine("Receiving Game Photo (Images Folder)");
+
             var fileCommonHandler = new FileCommsHandler(socketClient);
-            fileCommonHandler.ReceiveFile(gameName);
-            Console.WriteLine("Image received!\n");
+
+            string response = ReceiveMessage(); // Recibe el mensaje del servidor
+
+            if (response == "No image available")
+            {
+                Console.WriteLine("No image available for this game.\n");
+            }
+            else
+            {
+                Console.WriteLine("Image incoming...");
+                try
+                {
+                    fileCommonHandler.ReceiveFile(gameName);
+                    Console.WriteLine("Image received successfully!\n");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error receiving image: " + ex.Message + "\n");
+                }
+            }
 
             Console.WriteLine("Read Reviews? (yes/no)");
             string readReviews = Console.ReadLine();
-            if ("yes".Equals(readReviews))
+            if ("yes".Equals(readReviews, StringComparison.OrdinalIgnoreCase))
             {
                 SendAndReceiveMessage(readReviews);
             }
 
             Console.WriteLine("\n");
+
+            // Muestra el menú de opciones después de terminar
+            LoggedInMenu();
         }
+
+
+
 
         private static void BuyGame()
         {

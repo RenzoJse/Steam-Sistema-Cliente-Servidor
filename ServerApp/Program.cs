@@ -219,6 +219,7 @@ namespace ServerApp
         {
             Console.WriteLine("Database.ShowAllGameInformation -Initiated");
             Console.WriteLine("Database.ShowAllGameInformation -Executing");
+
             byte[] gameIdLength = networkDataHelper.Receive(largoDataLength);
             byte[] gameIdData = networkDataHelper.Receive(BitConverter.ToInt32(gameIdLength));
             string gameName = Encoding.UTF8.GetString(gameIdData);
@@ -229,12 +230,24 @@ namespace ServerApp
                 string response = game.ToString();
                 SuccesfulResponse(response, networkDataHelper);
 
-                Console.WriteLine("Sending File...");
-                String abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.ImageName);
-                var fileCommonHandler = new FileCommsHandler(socketClient);
-                fileCommonHandler.SendFile(abspath);
-                Console.WriteLine("File Sent Successfully!");
+                // Verificar si la imagen existe antes de intentar enviarla
+                Console.WriteLine("Checking if image file exists...");
+                string abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.ImageName);
+                if (File.Exists(abspath))
+                {
+                    Console.WriteLine("Sending File...");
+                    var fileCommonHandler = new FileCommsHandler(socketClient);
+                    fileCommonHandler.SendFile(abspath);
+                    Console.WriteLine("File Sent Successfully!");
+                }
+                else
+                {
+                    Console.WriteLine("Image file not found, skipping file send.");
+                    SuccesfulResponse("No image available", networkDataHelper); // Envía el mensaje al cliente
+                }
 
+
+                // Solicitar al cliente si desea recibir las reseñas
                 string option = ReceiveStringData(networkDataHelper);
                 if (option.Equals("yes"))
                 {
@@ -252,6 +265,7 @@ namespace ServerApp
                 throw new InvalidOperationException("Game not found.");
             }
         }
+
 
         private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
         {
