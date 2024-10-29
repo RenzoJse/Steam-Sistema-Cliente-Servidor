@@ -11,46 +11,36 @@ namespace Comunicacion
     public class NetworkDataHelper
     {
 
-        private readonly Socket _socket;
+        private readonly TcpClient _tcpClient;
 
-        public NetworkDataHelper(Socket socket)
+        public NetworkDataHelper(TcpClient tcpClient)
         {
-            _socket = socket;
+            _tcpClient = tcpClient;
         }
 
-        public void Send(byte[] data) 
+        public async Task Send(byte[] data)
         {
-            int offset = 0;
-            int size = data.Length;
-
-            while (offset < size) 
+            var stream = _tcpClient.GetStream();
+            var offset = 0;
+            while (offset < data.Length)
             {
-                int enviados = _socket.Send(data, offset, size - offset, SocketFlags.None);
-                if (enviados == 0) 
-                {
-                    throw new SocketException();
-                
-                }
-                offset += enviados;
+                await stream.WriteAsync(data.AsMemory(offset, data.Length - offset));
+                offset += data.Length - offset;
             }
         }
 
-        public byte[] Receive(int largo) 
+        public async Task<byte[]> Receive(int length)
         {
-            byte[] data = new byte[largo];
-            int offset = 0;
-            int size = largo;
+            var stream = _tcpClient.GetStream();
+            var data = new byte[length];
+            var offset = 0;
 
-            while (offset < size)
+            while (offset < length)
             {
-
-                int recibidos = _socket.Receive(data, offset, size - offset, SocketFlags.None);
-                if (recibidos == 0)
-                {
-                    throw new SocketException();
-
-                }
-                offset += recibidos;
+                var received = await stream.ReadAsync(data.AsMemory(offset, length - offset));
+                if (received == 0)
+                    throw new Exception("Connection lost");
+                offset += received;
             }
             return data;
         }

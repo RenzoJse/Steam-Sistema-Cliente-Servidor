@@ -58,7 +58,7 @@ namespace Comunicacion.Dominio
                 {
                     return false;
                 }
-                else if (activeUser.PurchasedGames.Any(g => g.Name == game.Name)) //si el juego ya lo tiene comprado 
+                else if (activeUser.PurchasedGames.Any(g => g.Name == game.Name)) //si el juego ya lo tiene comprado
                 {
                     return false;
                 }
@@ -67,7 +67,7 @@ namespace Comunicacion.Dominio
                 return true;
             }
         }
-        
+
         public void PublishGame(Game game, User user)
         {
             lock (_lock)
@@ -79,7 +79,7 @@ namespace Comunicacion.Dominio
 
                 User activeUser = _users.FirstOrDefault(u => u.Username == user.Username);
 
-                if (activeUser is null) 
+                if (activeUser is null)
                 {
                     return;
                 }
@@ -87,9 +87,9 @@ namespace Comunicacion.Dominio
                 activeUser.PublishedGames.Add(game);
             }
         }
-        
+
         private void PreLoadedUsers()
-        { 
+        {
             var admin = new User
             {
                 Username = "admin",

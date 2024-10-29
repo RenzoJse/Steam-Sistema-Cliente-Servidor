@@ -1,146 +1,139 @@
-﻿using Comunicacion;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net.Sockets;
+using Comunicacion;
 
-namespace Communication
+namespace Communication;
+
+public class FileCommsHandler
 {
-    public class FileCommsHandler
-    {
-        private readonly ConversionHandler _conversionHandler;
-        private readonly FileHandler _fileHandler;
-        private readonly FileStreamHandler _fileStreamHandler;
-        private readonly NetworkDataHelper _socketHelper;
+    private readonly ConversionHandler _conversionHandler;
+    private readonly FileHandler _fileHandler;
+    private readonly FileStreamHandler _fileStreamHandler;
+    private readonly NetworkDataHelper _socketHelper;
 
-        public FileCommsHandler(Socket socket)
+    public FileCommsHandler(TcpClient client)
+    {
+        _conversionHandler = new ConversionHandler();
+        _fileHandler = new FileHandler();
+        _fileStreamHandler = new FileStreamHandler();
+        _socketHelper = new NetworkDataHelper(client);
+    }
+
+    public async Task SendFile(string path)
+    {
+        if (_fileHandler.FileExists(path))
         {
-            _conversionHandler = new ConversionHandler();
-            _fileHandler = new FileHandler();
-            _fileStreamHandler = new FileStreamHandler();
-            _socketHelper = new NetworkDataHelper(socket);
+            var fileName = _fileHandler.GetFileName(path);
+            // ---> Enviar el largo del nombre del archivo
+            await _socketHelper.Send(_conversionHandler.ConvertIntToBytes(fileName.Length));
+            // ---> Enviar el nombre del archivo
+            await _socketHelper.Send(_conversionHandler.ConvertStringToBytes(fileName));
+
+            // ---> Obtener el tamaño del archivo
+            long fileSize = _fileHandler.GetFileSize(path);
+            // ---> Enviar el tamaño del archivo
+            var convertedFileSize = _conversionHandler.ConvertLongToBytes(fileSize);
+            await _socketHelper.Send(convertedFileSize);
+            // ---> Enviar el archivo (pero con file stream)
+            await SendFileWithStream(fileSize, path);
+        }
+        else
+        {
+            throw new Exception("File does not exist");
+        }
+    }
+
+    public async Task ReceiveFile(string gameName)
+    {
+        var imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+        if (!Directory.Exists(imagesDirectory))
+        {
+            Directory.CreateDirectory(imagesDirectory);
         }
 
-        public void SendFile(string path)
+        try
         {
-            if (_fileHandler.FileExists(path))
-            {
-                var fileName = _fileHandler.GetFileName(path);
-                // ---> Enviar el largo del nombre del archivo
-                _socketHelper.Send(_conversionHandler.ConvertIntToBytes(fileName.Length));
-                // ---> Enviar el nombre del archivo
-                _socketHelper.Send(_conversionHandler.ConvertStringToBytes(fileName));
+            // ---> Recibir el largo del nombre del archivo
+            var fileNameSize = _conversionHandler.ConvertBytesToInt(
+                await _socketHelper.Receive(4));
+            // ---> Recibir el nombre del archivo
+            var fileName = _conversionHandler.ConvertBytesToString(await _socketHelper.Receive(fileNameSize));
+            // ---> Recibir el largo del archivo
+            var fileSize = _conversionHandler.ConvertBytesToLong(
+                await _socketHelper.Receive(Protocol.FixedFileSize));
 
-                // ---> Obtener el tamaño del archivo
-                long fileSize = _fileHandler.GetFileSize(path);
-                // ---> Enviar el tamaño del archivo
-                var convertedFileSize = _conversionHandler.ConvertLongToBytes(fileSize);
-                _socketHelper.Send(convertedFileSize);
-                // ---> Enviar el archivo (pero con file stream)
-                SendFileWithStream(fileSize, path);
+            // Construct the full file path with the game name
+            var filePath = Path.Combine(imagesDirectory, $"{gameName}.jpg");
+
+            // ---> Recibir el archivo
+            await ReceiveFileWithStreams(fileSize, filePath);
+
+            Console.WriteLine($"File '{fileName}' received successfully and saved as '{filePath}'");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error receiving file: {ex.Message}");
+        }
+    }
+
+    private async Task SendFileWithStream(long fileSize, string path)
+    {
+        long fileParts = Protocol.CalculateFileParts(fileSize);
+        long offset = 0;
+        long currentPart = 1;
+
+        //Mientras tengo un segmento a enviar
+        while (fileSize > offset)
+        {
+            byte[] data;
+            //Es el último segmento?
+            if (currentPart == fileParts)
+            {
+                var lastPartSize = (int)(fileSize - offset);
+                //1- Leo de disco el último segmento
+                //2- Guardo el último segmento en un buffer
+                data = _fileStreamHandler.Read(path, offset, lastPartSize); //Puntos 1 y 2
+                offset += lastPartSize;
             }
             else
             {
-                throw new Exception("File does not exist");
+                //1- Leo de disco el segmento
+                //2- Guardo ese segmento en un buffer
+                data = _fileStreamHandler.Read(path, offset, Protocol.MaxPacketSize);
+                offset += Protocol.MaxPacketSize;
             }
+
+            await _socketHelper.Send(data); //3- Envío ese segmento a travez de la red
+            currentPart++;
         }
+    }
 
-        public void ReceiveFile(string gameName)
+    private async Task ReceiveFileWithStreams(long fileSize, string fileName)
+    {
+        long fileParts = Protocol.CalculateFileParts(fileSize);
+        long offset = 0;
+        long currentPart = 1;
+
+        //Mientras tengo partes para recibir
+        while (fileSize > offset)
         {
-            var imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Images");
-            if (!Directory.Exists(imagesDirectory))
+            byte[] data;
+            //1- Me fijo si es la ultima parte
+            if (currentPart == fileParts)
             {
-                Directory.CreateDirectory(imagesDirectory);
+                //1.1 - Si es, recibo la ultima parte
+                var lastPartSize = (int)(fileSize - offset);
+                data = await _socketHelper.Receive(lastPartSize);
+                offset += lastPartSize;
             }
-
-            try
+            else
             {
-                // ---> Recibir el largo del nombre del archivo
-                var fileNameSize = _conversionHandler.ConvertBytesToInt(
-                    _socketHelper.Receive(4));
-                // ---> Recibir el nombre del archivo
-                var fileName = _conversionHandler.ConvertBytesToString(_socketHelper.Receive(fileNameSize));
-                // ---> Recibir el largo del archivo
-                var fileSize = _conversionHandler.ConvertBytesToLong(
-                    _socketHelper.Receive(Protocol.FixedFileSize));
-
-                // Construct the full file path with the game name
-                var filePath = Path.Combine(imagesDirectory, $"{gameName}.jpg");
-
-                // ---> Recibir el archivo
-                ReceiveFileWithStreams(fileSize, filePath);
-
-                Console.WriteLine($"File '{fileName}' received successfully and saved as '{filePath}'");
+                //2.2- Si no, recibo una parte cualquiera
+                data = await _socketHelper.Receive(Protocol.MaxPacketSize);
+                offset += Protocol.MaxPacketSize;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error receiving file: {ex.Message}");
-            }
-        }
-
-        private void SendFileWithStream(long fileSize, string path)
-        {
-            long fileParts = Protocol.CalculateFileParts(fileSize);
-            long offset = 0;
-            long currentPart = 1;
-
-            //Mientras tengo un segmento a enviar
-            while (fileSize > offset)
-            {
-                byte[] data;
-                //Es el último segmento?
-                if (currentPart == fileParts)
-                {
-                    var lastPartSize = (int)(fileSize - offset);
-                    //1- Leo de disco el último segmento
-                    //2- Guardo el último segmento en un buffer
-                    data = _fileStreamHandler.Read(path, offset, lastPartSize); //Puntos 1 y 2
-                    offset += lastPartSize;
-                }
-                else
-                {
-                    //1- Leo de disco el segmento
-                    //2- Guardo ese segmento en un buffer
-                    data = _fileStreamHandler.Read(path, offset, Protocol.MaxPacketSize);
-                    offset += Protocol.MaxPacketSize;
-                }
-
-                _socketHelper.Send(data); //3- Envío ese segmento a travez de la red
-                currentPart++;
-            }
-        }
-
-        private void ReceiveFileWithStreams(long fileSize, string fileName)
-        {
-            long fileParts = Protocol.CalculateFileParts(fileSize);
-            long offset = 0;
-            long currentPart = 1;
-
-            //Mientras tengo partes para recibir
-            while (fileSize > offset)
-            {
-                byte[] data;
-                //1- Me fijo si es la ultima parte
-                if (currentPart == fileParts)
-                {
-                    //1.1 - Si es, recibo la ultima parte
-                    var lastPartSize = (int)(fileSize - offset);
-                    data = _socketHelper.Receive(lastPartSize);
-                    offset += lastPartSize;
-                }
-                else
-                {
-                    //2.2- Si no, recibo una parte cualquiera
-                    data = _socketHelper.Receive(Protocol.MaxPacketSize);
-                    offset += Protocol.MaxPacketSize;
-                }
-                //3- Escribo esa parte del archivo a disco
-                _fileStreamHandler.Write(fileName, data);
-                currentPart++;
-            }
+            //3- Escribo esa parte del archivo a disco
+            _fileStreamHandler.Write(fileName, data);
+            currentPart++;
         }
     }
 }
-

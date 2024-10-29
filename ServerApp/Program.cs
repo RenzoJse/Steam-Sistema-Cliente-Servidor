@@ -12,11 +12,11 @@ internal class Program
     private static readonly SettingsManager SettingsMngr = new();
     private static readonly UserManager UserManager = new();
     private static readonly GameManager GameManager = new();
-    private static readonly List<Socket> ClientSockets = [];
+    private static List<TcpClient> ConnectedClients = [];
     private const int LargoDataLength = 4; // Pasar a una clase con constantes del protocolo
 
     private static bool _serverRunning = true;
-    //private static object _lock = new object();
+    private static object _lock = new object();
 
     public static UserManager GetInstance()
     {
@@ -26,42 +26,42 @@ internal class Program
     private static async Task Main(string[] args)
     {
         Console.WriteLine("Starting Server Application..");
-        var socketServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
         var ipaddress = SettingsMngr.ReadSettings(ServerConfig.ServerIpConfigKey);
         var port = int.Parse(SettingsMngr.ReadSettings(ServerConfig.ServerPortConfigKey));
 
-        var localEndpoint = new IPEndPoint(IPAddress.Parse(ipaddress), port); //Puerto va entre 0 y 65535
-        socketServer.Bind(localEndpoint);
-        socketServer.Listen(3); // Nuestro Socket pasa a estar en modo escucha
+        var server = new TcpListener(IPAddress.Any, port);
+        server.Start();
+
         Console.WriteLine("Waiting for clients...");
         // Hilo para manejar la entrada de la consola del servidor
 
         Console.WriteLine("Type 'shutdown' to close the server");
-        new Thread(() =>
+        Task.Run(async () =>
         {
             var command = Console.ReadLine();
             if (command == "shutdown")
             {
-                foreach (var client in ClientSockets) client.Close();
+                foreach (var client in ConnectedClients) client.Close();
 
-                socketServer.Close();
                 _serverRunning = false;
+                server.Stop();
                 Console.WriteLine("Server is shutting down...");
             }
-        }).Start();
+        });
 
         while (_serverRunning)
             try
             {
                 var programInstance = new Program();
-                var
-                    clientSocket =
-                        socketServer.Accept(); // El accept es bloqueante, espera hasta que llega una nueva conexión
-                ClientSockets.Add(clientSocket);
+                var client = await server.AcceptTcpClientAsync(); // El accept es bloqueante, espera hasta que llega una nueva conexión
+                lock (_lock)
+                {
+                    ConnectedClients.Add(client);
+                }
                 Console.WriteLine("Client connected");
-                new Thread(() => HandleClient(clientSocket, programInstance))
-                    .Start(); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                var task = Task.Run(async () =>
+                    await HandleClient(client, programInstance)); // Lanzamos un nuevo hilo para manejar al nuevo cliente
             }
             catch (Exception ex)
             {
@@ -69,23 +69,23 @@ internal class Program
             }
 
         //HILO QUE MANEJA LOS CLIENTES
-        static void HandleClient(Socket clientSocket, Program program)
+        static async Task HandleClient(TcpClient client, Program program)
         {
             var clientIsConnected = true;
             User connectedUser = null;
-            var networkDataHelper = new NetworkDataHelper(clientSocket);
+            var networkDataHelper = new NetworkDataHelper(client);
 
             while (clientIsConnected)
                 try
                 {
                     while (connectedUser == null)
-                        switch (ProtocolMessage(networkDataHelper))
+                        switch (await ProtocolMessage(networkDataHelper))
                         {
                             case "1":
-                                program.RegisterNewUser(networkDataHelper);
+                                await RegisterNewUser(networkDataHelper);
                                 break;
                             case "2":
-                                connectedUser = LoginUser(networkDataHelper);
+                                connectedUser = await LoginUser(networkDataHelper);
                                 break;
                             case "3":
                                 clientIsConnected = false;
@@ -93,31 +93,31 @@ internal class Program
                         }
 
                     while (connectedUser != null)
-                        switch (ProtocolMessage(networkDataHelper))
+                        switch (await ProtocolMessage(networkDataHelper))
                         {
                             case "1":
-                                program.SearchGames(networkDataHelper);
+                                await SearchGames(networkDataHelper);
                                 break;
                             case "2":
-                                program.ShowAllGameInformation(networkDataHelper, clientSocket);
+                                await ShowAllGameInformation(networkDataHelper, client);
                                 break;
                             case "3":
-                                program.PurchaseGame(networkDataHelper, connectedUser);
+                                await program.PurchaseGame(networkDataHelper, connectedUser);
                                 break;
                             case "4":
-                                program.ReviewGame(networkDataHelper, connectedUser);
+                                await program.ReviewGame(networkDataHelper, connectedUser);
                                 break;
                             case "5":
-                                program.PublishGame(networkDataHelper, connectedUser, clientSocket);
+                                await program.PublishGame(networkDataHelper, connectedUser, client);
                                 break;
                             case "6":
-                                program.EditPublishedGame(networkDataHelper, connectedUser, clientSocket);
+                                await program.EditPublishedGame(networkDataHelper, connectedUser);
                                 break;
                             case "7":
-                                program.DeleteGame(networkDataHelper, connectedUser);
+                                await DeleteGame(networkDataHelper, connectedUser);
                                 break;
                             case "8":
-                                connectedUser = null;
+                                connectedUser = null!;
                                 break;
                         }
                 }
@@ -131,28 +131,30 @@ internal class Program
                     var response = ex.Message;
                     var responseData = Encoding.UTF8.GetBytes(response);
                     var responseDataLength = BitConverter.GetBytes(responseData.Length);
-                    networkDataHelper.Send(responseDataLength);
-                    networkDataHelper.Send(responseData);
+                    await networkDataHelper.Send(responseDataLength);
+                    await networkDataHelper.Send(responseData);
                 }
                 catch (InvalidOperationException ex)
                 {
                     var response = ex.Message;
                     var responseData = Encoding.UTF8.GetBytes(response);
                     var responseDataLength = BitConverter.GetBytes(responseData.Length);
-                    networkDataHelper.Send(responseDataLength);
-                    networkDataHelper.Send(responseData);
+                    await networkDataHelper.Send(responseDataLength);
+                    await networkDataHelper.Send(responseData);
                 }
         }
     }
 
-    private void RegisterNewUser(NetworkDataHelper networkDataHelper)
+    private static async Task RegisterNewUser(NetworkDataHelper networkDataHelper)
     {
-        var usernameLength = networkDataHelper.Receive(LargoDataLength);
-        var usernameData = networkDataHelper.Receive(BitConverter.ToInt32(usernameLength));
+        var usernameLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var usernameLength = BitConverter.ToInt32(usernameLengthData);
+        var usernameData = await networkDataHelper.Receive(usernameLength);
         var username = Encoding.UTF8.GetString(usernameData);
 
-        var passwordLength = networkDataHelper.Receive(LargoDataLength);
-        var passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
+        var passwordLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var passwordLength = BitConverter.ToInt32(passwordLengthData);
+        var passwordData = await networkDataHelper.Receive(passwordLength);
         var password = Encoding.UTF8.GetString(passwordData);
 
         if (password.Length < 4)
@@ -164,7 +166,7 @@ internal class Program
         if (UserManager.RegisterUser(username, password))
         {
             Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
-            SuccesfulResponse("User registered successfully", networkDataHelper);
+            await SuccesfulResponse("User registered successfully", networkDataHelper);
         }
         else
         {
@@ -172,43 +174,41 @@ internal class Program
         }
     }
 
-    private static User LoginUser(NetworkDataHelper networkDataHelper)
+    private static async Task<User> LoginUser(NetworkDataHelper networkDataHelper)
     {
-        var usernameLength = networkDataHelper.Receive(LargoDataLength);
-        var usernameData = networkDataHelper.Receive(BitConverter.ToInt32(usernameLength));
+        var usernameLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var usernameLength = BitConverter.ToInt32(usernameLengthData);
+        var usernameData = await networkDataHelper.Receive(usernameLength);
         var username = Encoding.UTF8.GetString(usernameData);
-        var passwordLength = networkDataHelper.Receive(LargoDataLength);
-        var passwordData = networkDataHelper.Receive(BitConverter.ToInt32(passwordLength));
+
+        var passwordLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var passwordLength = BitConverter.ToInt32(passwordLengthData);
+        var passwordData = await networkDataHelper.Receive(passwordLength);
         var password = Encoding.UTF8.GetString(passwordData);
 
         Console.WriteLine("Database.LoginUser -Initiated");
         Console.WriteLine("Database.LoginUser -Executing");
         var user = UserManager.AuthenticateUser(username, password);
-        if (user != null)
-        {
-            SuccesfulResponse("Login successful", networkDataHelper);
-            Console.WriteLine("User " + user.Username + " has logged in.");
-            return user;
-        }
-
-        throw new InvalidOperationException("Invalid username or password.");
-
-        return null;
+        if (user == null) throw new InvalidOperationException("Invalid username or password.");
+        await SuccesfulResponse("Login successful", networkDataHelper);
+        Console.WriteLine("User " + user.Username + " has logged in.");
+        return user;
     }
 
-    private void ShowAllGameInformation(NetworkDataHelper networkDataHelper, Socket socketClient)
+    private static async Task ShowAllGameInformation(NetworkDataHelper networkDataHelper, TcpClient socketClient)
     {
         Console.WriteLine("Database.ShowAllGameInformation -Initiated");
         Console.WriteLine("Database.ShowAllGameInformation -Executing");
-        var gameIdLength = networkDataHelper.Receive(LargoDataLength);
-        var gameIdData = networkDataHelper.Receive(BitConverter.ToInt32(gameIdLength));
+        var gameIdLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var gameIdLength = BitConverter.ToInt32(gameIdLengthData);
+        var gameIdData = await networkDataHelper.Receive(gameIdLength);
         var gameName = Encoding.UTF8.GetString(gameIdData);
 
         var game = GameManager.GetGameByName(gameName);
         if (game != null)
         {
             var response = game.ToString();
-            SuccesfulResponse(response, networkDataHelper);
+            await SuccesfulResponse(response, networkDataHelper);
 
             Console.WriteLine("Sending File...");
             try
@@ -221,7 +221,7 @@ internal class Program
                 }
 
                 var fileCommonHandler = new FileCommsHandler(socketClient);
-                fileCommonHandler.SendFile(abspath);
+                await fileCommonHandler.SendFile(abspath);
                 Console.WriteLine("File Sent Successfully!");
             }
             catch (Exception ex)
@@ -229,17 +229,21 @@ internal class Program
                 Console.WriteLine($"Error sending file: {ex.Message}");
             }
 
-            var option = ReceiveStringData(networkDataHelper);
-            if (option.Equals("yes"))
+            var option = await ReceiveStringData(networkDataHelper);
+            switch (option)
             {
-                var reviews = new StringBuilder("Reviews:\n");
-                foreach (var review in game.Reviews)
-                    reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
+                case "yes":
+                {
+                    var reviews = new StringBuilder("Reviews:\n");
+                    foreach (var review in game.Reviews)
+                        reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
 
-                SuccesfulResponse(reviews.ToString(), networkDataHelper);
-            }else if (option.Equals("no"))
-            {
-                SuccesfulResponse("Enjoy your game info!", networkDataHelper);
+                    await SuccesfulResponse(reviews.ToString(), networkDataHelper);
+                    break;
+                }
+                case "no":
+                    await SuccesfulResponse("Enjoy your game info!", networkDataHelper);
+                    break;
             }
         }
         else
@@ -248,55 +252,55 @@ internal class Program
         }
     }
 
-    private void PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
+    private async Task PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
     {
         Console.WriteLine("Database.PublishGame -Initiated");
         Console.WriteLine("Database.PublishGame -Executing");
 
-        var gameName = ReceiveStringData(networkDataHelper);
+        string gameName = await ReceiveStringData(networkDataHelper);
         var gameExists = GameManager.DoesGameExist(gameName);
         while (gameExists)
         {
-            SuccesfulResponse("Error: That Games Already Exist.", networkDataHelper);
-            gameName = ReceiveStringData(networkDataHelper);
+            await SuccesfulResponse("Error: That Games Already Exist.", networkDataHelper);
+            gameName = await ReceiveStringData(networkDataHelper);
             gameExists = GameManager.DoesGameExist(gameName);
-            if (!gameExists) SuccesfulResponse("Succesful New Game Name", networkDataHelper);
+            if (!gameExists) await SuccesfulResponse("Succesful New Game Name", networkDataHelper);
         }
 
-        SuccesfulResponse("Succesful New Game Name", networkDataHelper);
-        var genre = ReceiveStringData(networkDataHelper);
-        var releaseDateInput = ReceiveStringData(networkDataHelper);
+        await SuccesfulResponse("Succesful New Game Name", networkDataHelper);
+        var genre = await ReceiveStringData(networkDataHelper);
+        var releaseDateInput = await ReceiveStringData(networkDataHelper);
         var releaseDate = DateTime.Parse(releaseDateInput);
-        var platform = ReceiveStringData(networkDataHelper);
-        var unitsAvailable = int.Parse(ReceiveStringData(networkDataHelper));
-        var price = int.Parse(ReceiveStringData(networkDataHelper));
-        var variableSubida = ReceiveStringData(networkDataHelper);
-        SuccesfulResponse(variableSubida, networkDataHelper);
+        var platform = await ReceiveStringData(networkDataHelper);
+        var unitsAvailable = int.Parse(await ReceiveStringData(networkDataHelper));
+        var price = int.Parse(await ReceiveStringData(networkDataHelper));
+        var variableSubida = await ReceiveStringData(networkDataHelper);
+        await SuccesfulResponse(variableSubida, networkDataHelper);
         if (variableSubida == "yes")
         {
             Console.WriteLine("Image incoming...");
-            var fileCommonHandler = new FileCommsHandler(socketClient);
-            fileCommonHandler.ReceiveFile(gameName);
+            var fileCommonHandler = new FileCommsHandler(client);
+            await fileCommonHandler.ReceiveFile(gameName);
             Console.WriteLine("Image received!");
         }
 
         var valoration = 0;
-        var newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price,
-            valoration, connectedUser);
+        var newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration, connectedUser);
         UserManager.PublishGame(newGame, connectedUser);
     }
 
-    private static string ReceiveStringData(NetworkDataHelper networkDataHelper)
+    private static async Task<string> ReceiveStringData(NetworkDataHelper networkDataHelper)
     {
-        var dataLength = networkDataHelper.Receive(LargoDataLength);
-        var data = networkDataHelper.Receive(BitConverter.ToInt32(dataLength));
+        var dataLength = await networkDataHelper.Receive(LargoDataLength);
+        var data = await networkDataHelper.Receive(BitConverter.ToInt32(dataLength));
         return Encoding.UTF8.GetString(data);
     }
 
-    private void DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
+    private static async Task DeleteGame(NetworkDataHelper networkDataHelper, User connectedUser)
     {
-        var gameNameLength = networkDataHelper.Receive(LargoDataLength);
-        var gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+        var gameNameLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var gameNameLength = BitConverter.ToInt32(gameNameLengthData);
+        var gameNameData = await networkDataHelper.Receive(gameNameLength);
         var gameName = Encoding.UTF8.GetString(gameNameData);
 
         if (GameManager.DoesGameExist(gameName))
@@ -309,7 +313,7 @@ internal class Program
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{gameName}.jpg");
                 if (File.Exists(imagePath)) File.Delete(imagePath);
 
-                SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
+                await SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
             }
             else
             {
@@ -318,11 +322,11 @@ internal class Program
         }
         else
         {
-            SuccesfulResponse("Game not found.", networkDataHelper);
+            await SuccesfulResponse("Game not found.", networkDataHelper);
         }
     }
 
-    private void ShowAllGames(NetworkDataHelper networkDataHelper)
+    private static async Task ShowAllGames(NetworkDataHelper networkDataHelper)
     {
         Console.WriteLine("Database.ShowAllGames -Initiated");
         Console.WriteLine("Database.ShowAllGames -Executing");
@@ -334,49 +338,49 @@ internal class Program
         foreach (var game in games)
             response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
 
-        SuccesfulResponse(response.ToString(), networkDataHelper);
+        await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private void SearchGames(NetworkDataHelper networkDataHelper)
+    private static async Task SearchGames(NetworkDataHelper networkDataHelper)
     {
         Console.WriteLine("Database.SearchGames -Initiated");
         Console.WriteLine("Database.SearchGames -Executing");
-        var option = ReceiveStringData(networkDataHelper);
+        var option = await ReceiveStringData(networkDataHelper);
         switch (option)
         {
             case "1":
-                ShowAllGamesByGenre(networkDataHelper);
+                await ShowAllGamesByGenre(networkDataHelper);
                 break;
             case "2":
-                ShowAllGamesByPlatform(networkDataHelper);
+                await ShowAllGamesByPlatform(networkDataHelper);
                 break;
             case "3":
-                ShowAllGamesByValorations(networkDataHelper);
+                await ShowAllGamesByValorations(networkDataHelper);
                 break;
             case "4":
-                ShowAllGames(networkDataHelper);
+                await ShowAllGames(networkDataHelper);
                 break;
         }
     }
 
-    private void ShowAllGamesByValorations(NetworkDataHelper networkDataHelper)
+    private static async Task ShowAllGamesByValorations(NetworkDataHelper networkDataHelper)
     {
         var valoration = ReceiveStringData(networkDataHelper);
         Console.WriteLine("Received valoration: " + valoration);
 
-        var distinctGamesByValoration = GameManager.GetGamesByAttribute("Valoration", valoration);
+        var distinctGamesByValoration = GameManager.GetGamesByAttribute("Valoration", await valoration);
         Console.WriteLine("Found " + distinctGamesByValoration.Count + " games with valoration " + valoration);
 
         var response = new StringBuilder("Games with valoration " + valoration + ":\n");
         foreach (var game in distinctGamesByValoration)
             response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
 
-        SuccesfulResponse(response.ToString(), networkDataHelper);
+        await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private void ShowAllGamesByGenre(NetworkDataHelper networkDataHelper)
+    private static async Task ShowAllGamesByGenre(NetworkDataHelper networkDataHelper)
     {
-        var genre = ReceiveStringData(networkDataHelper);
+        var genre = await ReceiveStringData(networkDataHelper);
         Console.WriteLine("Received genre: " + genre);
 
         var distinctGamesByGenre = GameManager.GetGamesByAttribute("Genre", genre);
@@ -386,12 +390,12 @@ internal class Program
         foreach (var game in distinctGamesByGenre)
             response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
 
-        SuccesfulResponse(response.ToString(), networkDataHelper);
+        await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private void ShowAllGamesByPlatform(NetworkDataHelper networkDataHelper)
+    private static async Task ShowAllGamesByPlatform(NetworkDataHelper networkDataHelper)
     {
-        var platform = ReceiveStringData(networkDataHelper);
+        var platform = await ReceiveStringData(networkDataHelper);
         Console.WriteLine("Received platform: " + platform);
 
         var distinctGamesByPlatform = GameManager.GetGamesByAttribute("Platform", platform);
@@ -401,10 +405,10 @@ internal class Program
         foreach (var game in distinctGamesByPlatform)
             response.Append("\n- " + game.Name + " - Price: " + game.Price + " - Units: " + game.UnitsAvailable);
 
-        SuccesfulResponse(response.ToString(), networkDataHelper);
+        await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private void ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
+    private static async Task ShowPublishedGames(NetworkDataHelper networkDataHelper, User connectedUser)
     {
         Console.WriteLine("Database.ShowPublishedGames -Initiated");
         Console.WriteLine("Database.ShowPublishedGames -Executing");
@@ -413,28 +417,28 @@ internal class Program
 
         if (response.Length > 0) response.Length -= 2;
 
-        SuccesfulResponse(response.ToString(), networkDataHelper);
+        await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private void EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser, Socket socketClient)
+    private async Task EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
     {
         Console.WriteLine("Database.EditPublishedGame - Initiated");
 
-        var gameName = ReceiveStringData(networkDataHelper);
+        var gameName = await ReceiveStringData(networkDataHelper);
         var game = GameManager.GetGameByName(gameName);
 
         if (game == null || !connectedUser.PublishedGames.Contains(game))
         {
-            SuccesfulResponse("Error: Game not found or you are not the publisher.", networkDataHelper);
+            await SuccesfulResponse("Error: Game not found or you are not the publisher.", networkDataHelper);
             return;
         }
 
-        SuccesfulResponse("Game found. You can modify it.", networkDataHelper);
+        await SuccesfulResponse("Game found. You can modify it.", networkDataHelper);
 
         var modifying = true;
         while (modifying)
         {
-            var action = ReceiveStringData(networkDataHelper);
+            var action = await ReceiveStringData(networkDataHelper);
 
             if (action == "finishModification")
             {
@@ -445,8 +449,8 @@ internal class Program
 
             if (action == "modifyField")
             {
-                var field = ReceiveStringData(networkDataHelper);
-                var newValue = ReceiveStringData(networkDataHelper);
+                var field = await ReceiveStringData(networkDataHelper);
+                var newValue = await ReceiveStringData(networkDataHelper);
 
                 try
                 {
@@ -492,20 +496,21 @@ internal class Program
                             throw new ArgumentException("Invalid field.");
                     }
 
-                    SuccesfulResponse("Game edited successfully", networkDataHelper);
+                    await SuccesfulResponse("Game edited successfully", networkDataHelper);
                 }
                 catch (ArgumentException ex)
                 {
-                    SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
+                    await SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
                 }
             }
         }
     }
 
-    private void PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
+    private async Task PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
     {
-        var gameNameLength = networkDataHelper.Receive(LargoDataLength);
-        var gameNameData = networkDataHelper.Receive(BitConverter.ToInt32(gameNameLength));
+        var gameNameLengthData = await networkDataHelper.Receive(LargoDataLength);
+        var gameNameLength = BitConverter.ToInt32(gameNameLengthData);
+        var gameNameData = await networkDataHelper.Receive(gameNameLength);
         var gameName = Encoding.UTF8.GetString(gameNameData);
 
         var game = GameManager.GetGameByName(gameName);
@@ -520,7 +525,7 @@ internal class Program
         {
             GameManager.DiscountPurchasedGame(game);
             Console.WriteLine("Database.PurchaseGame - The game: " + game.Name + " has been purchased");
-            SuccesfulResponse("Game purchased successfully", networkDataHelper);
+            await SuccesfulResponse("Game purchased successfully", networkDataHelper);
         }
         else
         {
@@ -528,39 +533,38 @@ internal class Program
         }
     }
 
-    public void ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
+    private async Task ReviewGame(NetworkDataHelper networkDataHelper, User connectedUser)
     {
-        var gameName = ReceiveStringData(networkDataHelper);
+        var gameName = await ReceiveStringData(networkDataHelper);
         var game = GameManager.GetGameByName(gameName);
         if (game == null) throw new InvalidOperationException("Error: Game not found.");
 
         if (!connectedUser.PurchasedGames.Contains(game))
             throw new InvalidOperationException("Error: You must purchase the game to review it.");
 
-        SuccesfulResponse("Review Added Successfully", networkDataHelper);
-        var reviewText = ReceiveStringData(networkDataHelper);
+        await SuccesfulResponse("Review Added Successfully", networkDataHelper);
+        var reviewText = await ReceiveStringData(networkDataHelper);
         if (string.IsNullOrEmpty(reviewText)) reviewText = "No review";
 
-        var valoration = ReceiveStringData(networkDataHelper);
+        var valoration = await ReceiveStringData(networkDataHelper);
         var review = new Review { Valoration = int.Parse(valoration), Description = reviewText };
         GameManager.AddReview(gameName, review);
         GameManager.AddValoration(gameName, int.Parse(valoration));
-        SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);
+        await SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);
     }
 
-    private static void SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
+    private static async Task SuccesfulResponse(string message, NetworkDataHelper networkDataHelper)
     {
         var responseData = Encoding.UTF8.GetBytes(message);
         var responseDataLength = BitConverter.GetBytes(responseData.Length);
-        networkDataHelper.Send(responseDataLength);
-        networkDataHelper.Send(responseData);
+        await networkDataHelper.Send(responseDataLength);
+        await networkDataHelper.Send(responseData);
     } // Este metodo envia un mensaje de respuesta exitosa al cliente
 
-    private static string ProtocolMessage(NetworkDataHelper networkDataHelper)
+    private static async Task<string> ProtocolMessage(NetworkDataHelper networkDataHelper)
     {
-        var dataLength = networkDataHelper.Receive(LargoDataLength); // Recibo la parte fija de los datos
-        var data =
-            networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
+        var dataLength = await networkDataHelper.Receive(LargoDataLength); // Recibo la parte fija de los datos
+        var data = await networkDataHelper.Receive(BitConverter.ToInt32(dataLength)); // Recibo los datos(parte variable)
         Console.Write("Client says:");
         var message = Encoding.UTF8.GetString(data);
 
@@ -569,8 +573,8 @@ internal class Program
         var responseData = Encoding.UTF8.GetBytes(response);
         var responseDataLength = BitConverter.GetBytes(responseData.Length);
 
-        networkDataHelper.Send(responseDataLength);
-        networkDataHelper.Send(responseData);
+        await networkDataHelper.Send(responseDataLength);
+        await networkDataHelper.Send(responseData);
 
         Console.WriteLine(message);
         return message;
