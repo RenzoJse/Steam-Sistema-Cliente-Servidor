@@ -5,7 +5,7 @@ namespace Comunicacion.Dominio
 {
     public class UserManager
     {
-        private List<User> users = new List<User>();
+        private List<User> _users = new List<User>();
         private static object _lock = new object();
 
         public UserManager()
@@ -17,13 +17,13 @@ namespace Comunicacion.Dominio
         {
             lock (_lock)
             {
-                if (users.Any(u => u.Username == username))
+                if (_users.Any(u => u.Username == username))
                 {
                     return false; // Username already exists
                 }
                 else
                 {
-                    users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>(), PublishedGames = new List<Game>()});
+                    _users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>(), PublishedGames = new List<Game>()});
                     return true;
                 }
             }
@@ -33,7 +33,7 @@ namespace Comunicacion.Dominio
         {
             lock (_lock)
             {
-                var user = users.FirstOrDefault(u => u.Username == username);
+                var user = _users.FirstOrDefault(u => u.Username == username);
                 if (user != null && user.ValidatePassword(password))
                 {
                     return user;
@@ -52,7 +52,7 @@ namespace Comunicacion.Dominio
                     return false;
                 }
 
-                User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
+                User activeUser = _users.FirstOrDefault(u => u.Username == user.Username);
 
                 if (activeUser is null) //si el usuario no existe
                 {
@@ -77,7 +77,7 @@ namespace Comunicacion.Dominio
                     return;
                 }
 
-                User activeUser = users.FirstOrDefault(u => u.Username == user.Username);
+                User activeUser = _users.FirstOrDefault(u => u.Username == user.Username);
 
                 if (activeUser is null) 
                 {
@@ -97,7 +97,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(admin);
+            _users.Add(admin);
 
             var user1 = new User
             {
@@ -106,7 +106,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user1);
+            _users.Add(user1);
 
             var user2 = new User
             {
@@ -115,7 +115,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user2);
+            _users.Add(user2);
 
             var user3 = new User
             {
@@ -124,7 +124,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user3);
+            _users.Add(user3);
 
             var user4 = new User
             {
@@ -133,7 +133,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user4);
+            _users.Add(user4);
 
             var user5 = new User
             {
@@ -142,7 +142,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user5);
+            _users.Add(user5);
 
             var user6 = new User
             {
@@ -151,7 +151,7 @@ namespace Comunicacion.Dominio
                 PublishedGames = new List<Game>(),
                 PurchasedGames = new List<Game>()
             };
-            users.Add(user6);
+            _users.Add(user6);
         }
     }
 }

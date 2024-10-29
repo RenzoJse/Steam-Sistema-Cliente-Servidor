@@ -9,10 +9,10 @@ namespace ClientApp
     public static class ClientConfig
     {
 
-        public static string clientIPConfigKey = "ClientIpAddress";
-        public static string clientPortConfigKey = "ClientPort";
-        public static string serverIPConfigKey = "ServerIpAddress";
-        public static string serverPortConfigKey = "ServerPort";
+        public static string ClientIpConfigKey = "ClientIpAddress";
+        public static string ClientPortConfigKey = "ClientPort";
+        public static string ServerIpConfigKey = "ServerIpAddress";
+        public static string ServerPortConfigKey = "ServerPort";
         
     }
 }

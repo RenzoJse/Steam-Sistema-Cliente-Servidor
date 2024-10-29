@@ -49,25 +49,35 @@ namespace Communication
 
         public void ReceiveFile(string gameName)
         {
-            string imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+            var imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Images");
             if (!Directory.Exists(imagesDirectory))
             {
                 Directory.CreateDirectory(imagesDirectory);
             }
-            // ---> Recibir el largo del nombre del archivo
-            int fileNameSize = _conversionHandler.ConvertBytesToInt(
-                _socketHelper.Receive(Protocol.FixedDataSize));
-            // ---> Recibir el nombre del archivo
-            string fileName = _conversionHandler.ConvertBytesToString(_socketHelper.Receive(fileNameSize));
-            // ---> Recibir el largo del archivo
-            long fileSize = _conversionHandler.ConvertBytesToLong(
-                _socketHelper.Receive(Protocol.FixedFileSize));
-                
-            // Construct the full file path with the game name
-            string filePath = Path.Combine(imagesDirectory, $"{gameName}.jpg");
-            
-            // ---> Recibir el archivo
-            ReceiveFileWithStreams(fileSize, filePath);
+
+            try
+            {
+                // ---> Recibir el largo del nombre del archivo
+                var fileNameSize = _conversionHandler.ConvertBytesToInt(
+                    _socketHelper.Receive(4));
+                // ---> Recibir el nombre del archivo
+                var fileName = _conversionHandler.ConvertBytesToString(_socketHelper.Receive(fileNameSize));
+                // ---> Recibir el largo del archivo
+                var fileSize = _conversionHandler.ConvertBytesToLong(
+                    _socketHelper.Receive(Protocol.FixedFileSize));
+
+                // Construct the full file path with the game name
+                var filePath = Path.Combine(imagesDirectory, $"{gameName}.jpg");
+
+                // ---> Recibir el archivo
+                ReceiveFileWithStreams(fileSize, filePath);
+
+                Console.WriteLine($"File '{fileName}' received successfully and saved as '{filePath}'");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error receiving file: {ex.Message}");
+            }
         }
 
         private void SendFileWithStream(long fileSize, string path)

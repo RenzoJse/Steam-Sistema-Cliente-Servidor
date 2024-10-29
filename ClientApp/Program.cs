@@ -10,10 +10,10 @@ namespace ClientApp
 {
     internal class Program
     {
-        static readonly SettingsManager settingsMngr = new SettingsManager();
-        static NetworkDataHelper networkDataHelper;
+        static readonly SettingsManager SettingsMngr = new SettingsManager();
+        static NetworkDataHelper _networkDataHelper;
 
-        static bool clientRunning = false;
+        static bool _clientRunning = false;
 
         private static void LoginMenu()
         {
@@ -145,13 +145,13 @@ namespace ClientApp
             byte[] dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength);
-                networkDataHelper.Send(data);
+                _networkDataHelper.Send(dataLength);
+                _networkDataHelper.Send(data);
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -165,12 +165,12 @@ namespace ClientApp
             byte[] dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength);
-                networkDataHelper.Send(data);
+                _networkDataHelper.Send(dataLength);
+                _networkDataHelper.Send(data);
 
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                byte[] responseDataLength = _networkDataHelper.Receive(4);
+                byte[] responseData = _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 string response = Encoding.UTF8.GetString(responseData);
                 Console.WriteLine($"Server says: {response}");
 
@@ -179,7 +179,7 @@ namespace ClientApp
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
                 return false;
             }
             catch (Exception e)
@@ -318,18 +318,18 @@ namespace ClientApp
             try
             {
                 // ENVIO AL SERVER
-                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
-                networkDataHelper.Send(data); // Envio el mensaje (parte variable)
+                _networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
+                _networkDataHelper.Send(data); // Envio el mensaje (parte variable)
 
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                byte[] responseDataLength = _networkDataHelper.Receive(4);
+                byte[] responseData = _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -342,15 +342,15 @@ namespace ClientApp
             try
             {
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                var responseDataLength = _networkDataHelper.Receive(4);
+                var responseData = _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
                 return Encoding.UTF8.GetString(responseData);
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -431,7 +431,7 @@ namespace ClientApp
             Console.WriteLine("Game Name: ");
             string gameName = Console.ReadLine();
             SendAndReceiveMessage(gameName);
-            Console.WriteLine("Reciving Game Photo On (Images Folder)");
+            Console.WriteLine("Receiving Game Photo On (Images Folder)");
 
             Console.WriteLine("Image incoming...");
             var fileCommonHandler = new FileCommsHandler(socketClient);
@@ -440,9 +440,12 @@ namespace ClientApp
 
             Console.WriteLine("Read Reviews? (yes/no)");
             string readReviews = Console.ReadLine();
+            SendAndReceiveMessage(readReviews);
+
             if ("yes".Equals(readReviews))
             {
-                SendAndReceiveMessage(readReviews);
+                string reviews = ReceiveMessage();
+                Console.WriteLine(reviews);
             }
 
             Console.WriteLine("\n");
@@ -460,10 +463,10 @@ namespace ClientApp
             Console.WriteLine("Starting Client Application..");
             var socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            string ipServer = settingsMngr.ReadSettings(ClientConfig.serverIPConfigKey);
-            string ipClient = settingsMngr.ReadSettings(ClientConfig.clientIPConfigKey);
-            int serverPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.serverPortConfigKey));
-            int clientPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.clientPortConfigKey));
+            string ipServer = SettingsMngr.ReadSettings(ClientConfig.ServerIpConfigKey);
+            string ipClient = SettingsMngr.ReadSettings(ClientConfig.ClientIpConfigKey);
+            int serverPort = int.Parse(SettingsMngr.ReadSettings(ClientConfig.ServerPortConfigKey));
+            int clientPort = int.Parse(SettingsMngr.ReadSettings(ClientConfig.ClientPortConfigKey));
 
             var localEndpoint = new IPEndPoint(IPAddress.Parse(ipClient), clientPort);
             var remoteEndpoint = new IPEndPoint(IPAddress.Parse(ipServer), serverPort);
@@ -472,12 +475,12 @@ namespace ClientApp
             Console.WriteLine("Connecting to server...");
             socketClient.Connect(remoteEndpoint);
             Console.WriteLine("Connected to server!!!!");
-            clientRunning = true;
+            _clientRunning = true;
 
-            networkDataHelper = new NetworkDataHelper(socketClient);
+            _networkDataHelper = new NetworkDataHelper(socketClient);
 
             bool userConnected = false;
-            while (clientRunning)
+            while (_clientRunning)
             {
                 if (!userConnected)
                 {
@@ -485,7 +488,7 @@ namespace ClientApp
                     string option = Console.ReadLine();
                     SendAndReceiveMessage(option);
 
-                    if (!clientRunning)
+                    if (!_clientRunning)
                     {
                         break;
                     }
@@ -502,7 +505,7 @@ namespace ClientApp
                             }
                             break;
                         case "3":
-                            clientRunning = false;
+                            _clientRunning = false;
                             break;
                         default:
                             Console.WriteLine("Invalid option. Please try again.");
