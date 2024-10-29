@@ -10,10 +10,11 @@ namespace ClientApp
 {
     internal class Program
     {
-        static readonly SettingsManager settingsMngr = new SettingsManager();
-        static NetworkDataHelper networkDataHelper;
+        private static readonly SettingsManager SettingsMngr = new SettingsManager();
+        private static NetworkDataHelper? _networkDataHelper;
+        private static TcpClient _tcpClient = null!;
 
-        static bool clientRunning = false;
+        private static bool _clientRunning = false;
 
         private static void LoginMenu()
         {
@@ -34,26 +35,26 @@ namespace ClientApp
             Console.WriteLine("8. Logout");
         }
 
-        private static void PublishGame(Socket socketClient)
+        private static async Task PublishGame(TcpClient client)
         {
             Console.Write("Enter the game title:");
-            string titulo = Console.ReadLine();
-            SendMessage(titulo);
-            string error = ReceiveMessage();
+            var titulo = Console.ReadLine();
+            await SendMessage(titulo!);
+            var error = await ReceiveMessage();
             while (error == "Error: That Games Already Exist.")
             {
                 Console.Write("Enter the game title:");
                 titulo = Console.ReadLine();
-                SendMessage(titulo);
-                error = ReceiveMessage();
+                if (titulo != null) await SendMessage(titulo);
+                error = await ReceiveMessage();
             }
 
             Console.Write("Enter the game's genre:");
-            string genero = Console.ReadLine();
-            SendMessage(genero);
+            var genero = Console.ReadLine();
+            if (genero != null) await SendMessage(genero);
 
             Console.Write("Enter the release date (dd/mm/yyyy):");
-            string fechaLanzamiento = Console.ReadLine();
+            var fechaLanzamiento = Console.ReadLine();
             DateTime releaseDate;
             while (!DateTime.TryParseExact(fechaLanzamiento, "dd/MM/yyyy", null,
                        System.Globalization.DateTimeStyles.None, out releaseDate))
@@ -63,14 +64,14 @@ namespace ClientApp
                 fechaLanzamiento = Console.ReadLine();
             }
 
-            SendMessage(fechaLanzamiento);
+            await SendMessage(fechaLanzamiento);
 
             Console.Write("Enter the platform:");
-            string plataforma = Console.ReadLine();
-            SendMessage(plataforma);
+            var plataforma = Console.ReadLine();
+            if (plataforma != null) await SendMessage(plataforma);
 
             Console.Write("Enter the number of units available:");
-            string unidadesDisponibles = Console.ReadLine();
+            var unidadesDisponibles = Console.ReadLine();
             int unidades;
             while (!int.TryParse(unidadesDisponibles, out unidades))
             {
@@ -79,10 +80,10 @@ namespace ClientApp
                 unidadesDisponibles = Console.ReadLine();
             }
 
-            SendMessage(unidadesDisponibles);
+            await SendMessage(unidadesDisponibles);
 
             Console.Write("Enter the price:");
-            string precio = Console.ReadLine();
+            var precio = Console.ReadLine();
             int precioValue;
             while (!int.TryParse(precio, out precioValue))
             {
@@ -91,19 +92,19 @@ namespace ClientApp
                 precio = Console.ReadLine();
             }
 
-            SendMessage(precio);
+            await SendMessage(precio);
 
             Console.Write("Do you want to upload a cover image? (yes/no)");
-            string variableSubida = Console.ReadLine();
-            SendMessage(variableSubida);
+            var variableSubida = Console.ReadLine();
+            await SendMessage(variableSubida!);
 
-            string vairableSubida2 = ReceiveMessage();
-            if (vairableSubida2 == "yes")
+            var uploadImage = await ReceiveMessage();
+            if (uploadImage == "yes")
             {
                 Console.WriteLine("Enter the full path of the file to send:");
-                String abspath = Console.ReadLine();
-                var fileCommonHandler = new FileCommsHandler(socketClient);
-                fileCommonHandler.SendFile(abspath);
+                var abspath = Console.ReadLine();
+                var fileCommonHandler = new FileCommsHandler(client);
+                await fileCommonHandler.SendFile(abspath!);
                 Console.WriteLine("The file was sent to the server");
             }
 
@@ -112,46 +113,41 @@ namespace ClientApp
             Console.WriteLine("");
         }
 
-        private static void RegisterUser()
+        private static async Task RegisterUser()
         {
             Console.Write("Enter username: ");
-            string username = Console.ReadLine();
+            var username = Console.ReadLine();
             Console.Write("Enter password: ");
-            string password = Console.ReadLine();
+            var password = Console.ReadLine();
 
-            SendMessage(username);
-            SendAndReceiveMessage(password);
+            await SendMessage(username!);
+            await SendAndReceiveMessage(password!);
         }
 
-        private static bool Login()
+        private static async Task<bool> Login()
         {
             Console.Write("Enter username: ");
-            string username = Console.ReadLine();
+            var username = Console.ReadLine();
             Console.Write("Enter password: ");
-            string password = Console.ReadLine();
+            var password = Console.ReadLine();
 
-            SendMessage(username);
-            return SendAndReceiveMessageBool(password);
+            await SendMessage(username!);
+            return await SendAndReceiveMessageBool(password!);
         }
 
-        private static bool HavePublishedGames(string message)
+        private static async Task SendMessage(string message)
         {
-            return SendAndReceiveMessageBool(message);
-        }
-
-        private static void SendMessage(string message)
-        {
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            byte[] dataLength = BitConverter.GetBytes(data.Length);
+            var data = Encoding.UTF8.GetBytes(message);
+            var dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength);
-                networkDataHelper.Send(data);
+                await _networkDataHelper!.Send(dataLength);
+                await _networkDataHelper.Send(data);
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -159,19 +155,19 @@ namespace ClientApp
             }
         }
 
-        private static bool SendAndReceiveMessageBool(string message)
+        private static async Task<bool> SendAndReceiveMessageBool(string message)
         {
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            byte[] dataLength = BitConverter.GetBytes(data.Length);
+            var data = Encoding.UTF8.GetBytes(message);
+            var dataLength = BitConverter.GetBytes(data.Length);
             try
             {
-                networkDataHelper.Send(dataLength);
-                networkDataHelper.Send(data);
+                await _networkDataHelper!.Send(dataLength);
+                await _networkDataHelper.Send(data);
 
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
-                string response = Encoding.UTF8.GetString(responseData);
+                var responseDataLength = await _networkDataHelper.Receive(4);
+                var responseData = await _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                var response = Encoding.UTF8.GetString(responseData);
                 Console.WriteLine($"Server says: {response}");
 
                 return response is "Login successful" or "True";
@@ -179,7 +175,7 @@ namespace ClientApp
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
                 return false;
             }
             catch (Exception e)
@@ -189,20 +185,20 @@ namespace ClientApp
             }
         }
 
-        private static void ModifyGame(Socket socketClient)
+        private static async Task ModifyGame(TcpClient client)
         {
             Console.Write("Enter the name of the game you want to modify: ");
-            string gameName = Console.ReadLine();
-            SendMessage(gameName);
+            var gameName = Console.ReadLine();
+            await SendMessage(gameName!);
 
-            string response = ReceiveMessage();
+            var response = await ReceiveMessage();
             if (response.Contains("Error"))
             {
                 Console.WriteLine(response);
                 return;
             }
 
-            bool modifying = true;
+            var modifying = true;
             while (modifying)
             {
                 Console.WriteLine("What attribute would you like to modify?");
@@ -271,7 +267,7 @@ namespace ClientApp
                     //     SendMessage("deleteExistingCover");
                     //     Console.WriteLine("Enter the full path of the file to send:");
                     //     string abspath = Console.ReadLine();
-                    //     var fileCommonHandler = new FileCommsHandler(socketClient);
+                    //     var fileCommonHandler = new FileCommsHandler(client);
                     //     fileCommonHandler.SendFile(abspath);
                     //     Console.WriteLine("The new cover image has been sent to the server.");
                     //     continue;
@@ -285,11 +281,11 @@ namespace ClientApp
                         continue;
                 }
 
-                SendMessage("modifyField");
-                SendMessage(field);
-                SendMessage(newValue);
+                await SendMessage("modifyField");
+                await SendMessage(field);
+                await SendMessage(newValue);
 
-                string modifyResponse = ReceiveMessage();
+                string modifyResponse = await ReceiveMessage();
                 Console.WriteLine(modifyResponse);
 
                 Console.WriteLine("Do you want to modify another attribute? (yes/no)");
@@ -297,39 +293,39 @@ namespace ClientApp
                 if (continueModifying != "yes")
                 {
                     modifying = false;
-                    SendMessage("finishModification");
+                    await SendMessage("finishModification");
                     Console.WriteLine("Finished modifying the game.");
                 }
             }
         }
 
-        private static void DeleteGame()
+        private static async Task DeleteGame()
         {
             Console.Write("Which Game Do You Want To Delete?: ");
-            string gameName = Console.ReadLine();
+            var gameName = Console.ReadLine();
 
-            SendAndReceiveMessage(gameName);
+            await SendAndReceiveMessage(gameName!);
         }
 
-        private static void SendAndReceiveMessage(string message)
+        private static async Task SendAndReceiveMessage(string message)
         {
             byte[] data = Encoding.UTF8.GetBytes(message); // Convierte de string a una array de bytes
             byte[] dataLength = BitConverter.GetBytes(data.Length); // Calculo el largo de los datos que voy a enviar
             try
             {
                 // ENVIO AL SERVER
-                networkDataHelper.Send(dataLength); // Envio el largo del mensaje (parte fija)
-                networkDataHelper.Send(data); // Envio el mensaje (parte variable)
+                await _networkDataHelper!.Send(dataLength); // Envio el largo del mensaje (parte fija)
+                await _networkDataHelper.Send(data); // Envio el mensaje (parte variable)
 
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                byte[] responseDataLength = await _networkDataHelper.Receive(4);
+                byte[] responseData = await _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -337,20 +333,20 @@ namespace ClientApp
             }
         }
 
-        private static string ReceiveMessage()
+        private static async Task<string> ReceiveMessage()
         {
             try
             {
                 // RECIBO DEL SERVER
-                byte[] responseDataLength = networkDataHelper.Receive(4);
-                byte[] responseData = networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
+                var responseDataLength = await _networkDataHelper!.Receive(4);
+                var responseData = await _networkDataHelper.Receive(BitConverter.ToInt32(responseDataLength));
                 Console.WriteLine($"Server says: {Encoding.UTF8.GetString(responseData)}");
                 return Encoding.UTF8.GetString(responseData);
             }
             catch (SocketException)
             {
                 Console.WriteLine("Connection with the server has been interrupted");
-                clientRunning = false;
+                _clientRunning = false;
             }
             catch (Exception e)
             {
@@ -361,39 +357,39 @@ namespace ClientApp
             return null;
         }
 
-        private static void SearchGames()
+        private static async Task SearchGames()
         {
             Console.WriteLine("1. Search by genre");
             Console.WriteLine("2. Search by platform");
             Console.WriteLine("3. Search by valoration");
             Console.WriteLine("4. Show all games");
-            string option = Console.ReadLine();
-            SendMessage(option);
+            var option = Console.ReadLine();
+            await SendMessage(option!);
             switch (option)
             {
                 case "1":
                     Console.Write("Enter genre: ");
-                    string genre = Console.ReadLine();
-                    if (genre != null) SendAndReceiveMessage(genre);
+                    string genre = Console.ReadLine()!;
+                    await SendAndReceiveMessage(genre);
                     break;
                 case "2":
                     Console.Write("Enter platform: ");
-                    string platform = Console.ReadLine();
-                    SendAndReceiveMessage(platform);
+                    string platform = Console.ReadLine()!;
+                    await SendAndReceiveMessage(platform);
                     break;
                 case "3":
                     Console.Write("Enter valoration (1-10): ");
-                    string valoration = Console.ReadLine();
+                    string valoration = Console.ReadLine()!;
                     while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
                     {
                         Console.WriteLine("Invalid valoration. Please enter a number between 1 and 10.");
-                        valoration = Console.ReadLine();
+                        valoration = Console.ReadLine()!;
                     }
 
-                    SendAndReceiveMessage(valoration);
+                    await SendAndReceiveMessage(valoration);
                     break;
                 case "4":
-                    ReceiveMessage();
+                    await ReceiveMessage();
                     break;
                 default:
                     Console.WriteLine("Invalid option. Please try again.");
@@ -401,66 +397,51 @@ namespace ClientApp
             }
         }
 
-        private static void ReviewGame()
+        private static async Task ReviewGame()
         {
             Console.Write("Which Game Do You Want To Review? : ");
-            string gameName = Console.ReadLine();
-            SendMessage(gameName);
-            string response = ReceiveMessage();
+            string gameName = Console.ReadLine()!;
+            await SendMessage(gameName!);
+            string response = await ReceiveMessage();
             if (!response.Contains("Error"))
             {
                 Console.Write("Write an opinion about the game: ");
-                string reviewText = Console.ReadLine();
-                SendMessage(reviewText);
+                string reviewText = Console.ReadLine()!;
+                await SendMessage(reviewText);
                 Console.Write("How Would You Rate It? (0-10): ");
-                string valoration = Console.ReadLine();
+                string valoration = Console.ReadLine()!;
                 while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
                 {
                     Console.Write("Invalid valoration. Please enter a number between 1 and 10: ");
-                    valoration = Console.ReadLine();
+                    valoration = Console.ReadLine()!;
                 }
 
-                SendMessage(valoration);
+                await SendMessage(valoration);
             }
 
             Console.WriteLine(ReceiveMessage());
         }
 
-        private static void MoreInfoGame(Socket socketClient)
+        private static async Task MoreInfoGame(TcpClient client)
         {
             Console.WriteLine("Game Name: ");
-            string gameName = Console.ReadLine();
-            SendAndReceiveMessage(gameName);
+            string gameName = Console.ReadLine()!;
+            await SendAndReceiveMessage(gameName);
+            Console.WriteLine("Receiving Game Photo On (Images Folder)");
 
-            Console.WriteLine("Receiving Game Photo (Images Folder)");
-
-            var fileCommonHandler = new FileCommsHandler(socketClient);
-
-            string response = ReceiveMessage(); // Recibe el mensaje del servidor
-
-            if (response == "No image available")
-            {
-                Console.WriteLine("No image available for this game.\n");
-            }
-            else
-            {
-                Console.WriteLine("Image incoming...");
-                try
-                {
-                    fileCommonHandler.ReceiveFile(gameName);
-                    Console.WriteLine("Image received successfully!\n");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error receiving image: " + ex.Message + "\n");
-                }
-            }
+            Console.WriteLine("Image incoming...");
+            var fileCommonHandler = new FileCommsHandler(client);
+            await fileCommonHandler.ReceiveFile(gameName);
+            Console.WriteLine("Image received!\n");
 
             Console.WriteLine("Read Reviews? (yes/no)");
-            string readReviews = Console.ReadLine();
-            if ("yes".Equals(readReviews, StringComparison.OrdinalIgnoreCase))
+            string readReviews = Console.ReadLine()!;
+            await SendAndReceiveMessage(readReviews);
+
+            if ("yes".Equals(readReviews))
             {
-                SendAndReceiveMessage(readReviews);
+                string reviews = await ReceiveMessage();
+                Console.WriteLine(reviews);
             }
 
             Console.WriteLine("\n");
@@ -469,112 +450,121 @@ namespace ClientApp
             LoggedInMenu();
         }
 
-
-
-
-        private static void BuyGame()
+        private static async Task BuyGame()
         {
             Console.WriteLine("Which Game Do You Want To Buy: ");
-            string gamePurchase = Console.ReadLine();
-            SendAndReceiveMessage(gamePurchase);
+            string gamePurchase = Console.ReadLine()!;
+            await SendAndReceiveMessage(gamePurchase);
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.WriteLine("Starting Client Application..");
-            var socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            var tcpClient = new TcpClient();
 
-            string ipServer = settingsMngr.ReadSettings(ClientConfig.serverIPConfigKey);
-            string ipClient = settingsMngr.ReadSettings(ClientConfig.clientIPConfigKey);
-            int serverPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.serverPortConfigKey));
-            int clientPort = int.Parse(settingsMngr.ReadSettings(ClientConfig.clientPortConfigKey));
+            string ipServer = SettingsMngr.ReadSettings(ClientConfig.ServerIpConfigKey);
+            string ipClient = SettingsMngr.ReadSettings(ClientConfig.ClientIpConfigKey);
+            int serverPort = int.Parse(SettingsMngr.ReadSettings(ClientConfig.ServerPortConfigKey));
+            int clientPort = int.Parse(SettingsMngr.ReadSettings(ClientConfig.ClientPortConfigKey));
 
             var localEndpoint = new IPEndPoint(IPAddress.Parse(ipClient), clientPort);
             var remoteEndpoint = new IPEndPoint(IPAddress.Parse(ipServer), serverPort);
 
-            socketClient.Bind(localEndpoint);
+            tcpClient.Client.Bind(localEndpoint);
             Console.WriteLine("Connecting to server...");
-            socketClient.Connect(remoteEndpoint);
+            await tcpClient.ConnectAsync(remoteEndpoint.Address, remoteEndpoint.Port);
             Console.WriteLine("Connected to server!!!!");
-            clientRunning = true;
+            _clientRunning = true;
 
-            networkDataHelper = new NetworkDataHelper(socketClient);
+            _networkDataHelper = new NetworkDataHelper(tcpClient);
 
             bool userConnected = false;
-            while (clientRunning)
+            while (_clientRunning)
             {
-                if (!userConnected)
+                try
                 {
-                    LoginMenu();
-                    string option = Console.ReadLine();
-                    SendAndReceiveMessage(option);
-
-                    if (!clientRunning)
+                    if (!userConnected)
                     {
-                        break;
+                        LoginMenu();
+                        string option = Console.ReadLine()!;
+                        await SendAndReceiveMessage(option);
+
+                        if (!_clientRunning)
+                        {
+                            break;
+                        }
+
+                        switch (option)
+                        {
+                            case "1":
+                                await RegisterUser();
+                                break;
+                            case "2":
+                                if (await Login())
+                                {
+                                    userConnected = true;
+                                }
+
+                                break;
+                            case "3":
+                                _clientRunning = false;
+                                break;
+                            default:
+                                Console.WriteLine("Invalid option. Please try again.");
+                                break;
+                        }
                     }
-
-                    switch (option)
+                    else
                     {
-                        case "1":
-                            RegisterUser();
-                            break;
-                        case "2":
-                            if (Login())
-                            {
-                                userConnected = true;
-                            }
-                            break;
-                        case "3":
-                            clientRunning = false;
-                            break;
-                        default:
-                            Console.WriteLine("Invalid option. Please try again.");
-                            break;
+                        LoggedInMenu();
+                        string option = Console.ReadLine()!;
+                        await SendAndReceiveMessage(option);
+
+                        switch (option)
+                        {
+                            case "1":
+                                await SearchGames();
+                                break;
+                            case "2":
+                                await MoreInfoGame(tcpClient);
+                                break;
+                            case "3":
+                                await BuyGame();
+                                break;
+                            case "4":
+                                await ReviewGame();
+                                break;
+                            case "5":
+                                await PublishGame(tcpClient);
+                                break;
+                            case "6":
+                                await ModifyGame(tcpClient);
+                                break;
+                            case "7":
+                                await DeleteGame();
+                                break;
+                            case "8": //Logout
+                                userConnected = false;
+                                break;
+                            default:
+                                Console.WriteLine("Invalid option. Please try again.");
+                                break;
+                        }
                     }
                 }
-                else
+                catch (SocketException)
                 {
-                    LoggedInMenu();
-                    string option = Console.ReadLine();
-                    SendAndReceiveMessage(option);
-
-                    switch (option)
-                    {
-                        case "1":
-                            SearchGames();
-                            break;
-                        case "2":
-                            MoreInfoGame(socketClient);
-                            break;
-                        case "3":
-                            BuyGame();
-                            break;
-                        case "4":
-                            ReviewGame();
-                            break;
-                        case "5":
-                            PublishGame(socketClient);
-                            break;
-                        case "6":
-                            ModifyGame(socketClient);
-                            break;
-                        case "7":
-                            DeleteGame();
-                            break;
-                        case "8": //Logout
-                            userConnected = false;
-                            break;
-                        default:
-                            Console.WriteLine("Invalid option. Please try again.");
-                            break;
-                    }
+                    Console.WriteLine("The server has closed the connection.");
+                    _clientRunning = false;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error: " + e.Message);
                 }
             }
 
             Console.WriteLine("Will Close Connection...");
-            socketClient.Shutdown(SocketShutdown.Both);
-            socketClient.Close();
+            tcpClient.Close();
         }
     }
 }

@@ -2,7 +2,7 @@
 {
     public class GameManager
     {
-        private static List<Game> Games = new List<Game>();
+        private static List<Game> _games = new List<Game>();
         private static object _lock = new object();
 
         public GameManager()
@@ -28,7 +28,7 @@
                     Reviews = new List<Review>(),
                     ImageName = name
                 };
-                Games.Add(newGame);
+                _games.Add(newGame);
                 return newGame;
             }
         }
@@ -37,20 +37,20 @@
         {
             lock (_lock)
             {
-                return Games;
+                return _games;
             }
         }
 
         public static Game GetGameByName(string name)
         {
-            return Games.FirstOrDefault(g => g.Name == name);
+            return _games.FirstOrDefault(g => g.Name == name);
         }
 
         public void AddGame(Game game)
         {
             lock (_lock)
             {
-                Games.Add(game);
+                _games.Add(game);
             }
         }
 
@@ -61,7 +61,7 @@
                 var game = GetGameByName(name);
                 if (game != null)
                 {
-                    Games.Remove(game);
+                    _games.Remove(game);
                 }
             }
         }
@@ -70,7 +70,7 @@
         {
             lock (_lock)
             {
-                Game gamePurchased = Games.FirstOrDefault(g => g.Name == game.Name);
+                Game gamePurchased = _games.FirstOrDefault(g => g.Name == game.Name);
 
                 if (gamePurchased != null) gamePurchased.UnitsAvailable--;
             }
@@ -80,7 +80,7 @@
         {
             lock (_lock)
             {
-                return Games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                return _games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -112,7 +112,7 @@
         {
             lock (_lock)
             {
-                return Games.Where(g =>
+                return _games.Where(g =>
                     {
                         var property = typeof(Game).GetProperty(attributeName);
                         if (property != null)
@@ -140,7 +140,7 @@
                 Price = 10,
                 Platform = "PC"
             };
-            Games.Add(fortnite);
+            _games.Add(fortnite);
 
             Game roblox = new Game
             {
@@ -153,7 +153,7 @@
                 Price = 5,
                 Platform = "PC"
             };
-            Games.Add(roblox);
+            _games.Add(roblox);
 
             Game minecraft = new Game
             {
@@ -166,7 +166,7 @@
                 Price = 20,
                 Platform = "PC"
             };
-            Games.Add(minecraft);
+            _games.Add(minecraft);
 
             Game pokemonSword = new Game
             {
@@ -179,7 +179,7 @@
                 Price = 150,
                 Platform = "Nintendo Switch"
             };
-            Games.Add(pokemonSword);
+            _games.Add(pokemonSword);
 
             Game noMorePokemon = new Game
             {
@@ -192,7 +192,7 @@
                 Price = 9,
                 Platform = "IOS"
             };
-            Games.Add(noMorePokemon);
+            _games.Add(noMorePokemon);
 
             Game leagueOfLegends = new Game
             {
@@ -205,7 +205,7 @@
                 Price = 0,
                 Platform = "PC"
             };
-            Games.Add(leagueOfLegends);
+            _games.Add(leagueOfLegends);
         }
     }
 }

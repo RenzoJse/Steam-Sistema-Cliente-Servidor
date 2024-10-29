@@ -8,8 +8,8 @@ namespace ServerApp
 {
     public static class ServerConfig
     {
-        public static string serverIPConfigKey = "ServerIpAddress";
-        public static string serverPortConfigKey = "ServerPort";
+        public static string ServerIpConfigKey = "ServerIpAddress";
+        public static string ServerPortConfigKey = "ServerPort";
 
     }
 }
