@@ -478,72 +478,85 @@ namespace ClientApp
             bool userConnected = false;
             while (_clientRunning)
             {
-                if (!userConnected)
+                try
                 {
-                    LoginMenu();
-                    string option = Console.ReadLine()!;
-                    await SendAndReceiveMessage(option);
-
-                    if (!_clientRunning)
+                    if (!userConnected)
                     {
-                        break;
+                        LoginMenu();
+                        string option = Console.ReadLine()!;
+                        await SendAndReceiveMessage(option);
+
+                        if (!_clientRunning)
+                        {
+                            break;
+                        }
+
+                        switch (option)
+                        {
+                            case "1":
+                                await RegisterUser();
+                                break;
+                            case "2":
+                                if (await Login())
+                                {
+                                    userConnected = true;
+                                }
+
+                                break;
+                            case "3":
+                                _clientRunning = false;
+                                break;
+                            default:
+                                Console.WriteLine("Invalid option. Please try again.");
+                                break;
+                        }
                     }
-
-                    switch (option)
+                    else
                     {
-                        case "1":
-                            await RegisterUser();
-                            break;
-                        case "2":
-                            if (await Login())
-                            {
-                                userConnected = true;
-                            }
-                            break;
-                        case "3":
-                            _clientRunning = false;
-                            break;
-                        default:
-                            Console.WriteLine("Invalid option. Please try again.");
-                            break;
+                        LoggedInMenu();
+                        string option = Console.ReadLine()!;
+                        await SendAndReceiveMessage(option);
+
+                        switch (option)
+                        {
+                            case "1":
+                                await SearchGames();
+                                break;
+                            case "2":
+                                await MoreInfoGame(tcpClient);
+                                break;
+                            case "3":
+                                await BuyGame();
+                                break;
+                            case "4":
+                                await ReviewGame();
+                                break;
+                            case "5":
+                                await PublishGame(tcpClient);
+                                break;
+                            case "6":
+                                await ModifyGame(tcpClient);
+                                break;
+                            case "7":
+                                await DeleteGame();
+                                break;
+                            case "8": //Logout
+                                userConnected = false;
+                                break;
+                            default:
+                                Console.WriteLine("Invalid option. Please try again.");
+                                break;
+                        }
                     }
                 }
-                else
+                catch (SocketException)
                 {
-                    LoggedInMenu();
-                    string option = Console.ReadLine()!;
-                    await SendAndReceiveMessage(option);
-
-                    switch (option)
-                    {
-                        case "1":
-                            await SearchGames();
-                            break;
-                        case "2":
-                            await MoreInfoGame(tcpClient);
-                            break;
-                        case "3":
-                            await BuyGame();
-                            break;
-                        case "4":
-                            await ReviewGame();
-                            break;
-                        case "5":
-                            await PublishGame(tcpClient);
-                            break;
-                        case "6":
-                            await ModifyGame(tcpClient);
-                            break;
-                        case "7":
-                            await DeleteGame();
-                            break;
-                        case "8": //Logout
-                            userConnected = false;
-                            break;
-                        default:
-                            Console.WriteLine("Invalid option. Please try again.");
-                            break;
-                    }
+                    Console.WriteLine("The server has closed the connection.");
+                    _clientRunning = false;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error: " + e.Message);
                 }
             }
 

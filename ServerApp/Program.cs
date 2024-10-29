@@ -16,6 +16,8 @@ internal class Program
     private const int LargoDataLength = 4; // Pasar a una clase con constantes del protocolo
 
     private static bool _serverRunning = true;
+    private static readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
+    private static readonly CancellationToken CancellationToken = CancellationTokenSource.Token;
     private static object _lock = new object();
 
     public static UserManager GetInstance()
@@ -39,14 +41,47 @@ internal class Program
         Console.WriteLine("Type 'shutdown' to close the server");
         Task.Run(async () =>
         {
-            var command = Console.ReadLine();
-            if (command == "shutdown")
+            while (_serverRunning)
             {
-                foreach (var client in ConnectedClients) client.Close();
+                var command = Console.ReadLine();
+                if (command == "shutdown")
+                {
+                    Console.WriteLine("Do you want to wait for clients to disconnect? (yes/no)");
+                    var response = Console.ReadLine();
+                    if (response?.ToLower() == "yes")
+                    {
+                        Console.WriteLine("Waiting for clients to disconnect...");
 
-                _serverRunning = false;
-                server.Stop();
-                Console.WriteLine("Server is shutting down...");
+                        while (ConnectedClients.Count > 0)
+                        {
+                            await Task.Delay(100); // Small delay to prevent busy-waiting
+                        }
+
+                        var disconnectTasks = ConnectedClients.Select(async client =>
+                        {
+                            client.Close();
+                        }).ToList();
+
+                        await Task.WhenAll(disconnectTasks);
+                        Console.WriteLine("All clients disconnected. Server is shutting down...");
+                        _serverRunning = false;
+                        server.Stop();
+                    }
+                    else
+                    {
+                        lock (_lock)
+                        {
+                            foreach (var client in ConnectedClients)
+                            {
+                                client.Close();
+                            }
+                        }
+                        _serverRunning = false;
+                        server.Stop();
+                        Console.WriteLine("Server is shutting down...");
+                    }
+                    break;
+                }
             }
         });
 
@@ -61,7 +96,7 @@ internal class Program
                 }
                 Console.WriteLine("Client connected");
                 var task = Task.Run(async () =>
-                    await HandleClient(client, programInstance)); // Lanzamos un nuevo hilo para manejar al nuevo cliente
+                    await HandleClient(client, programInstance, CancellationToken)); // Lanzamos un nuevo hilo para manejar al nuevo cliente
             }
             catch (Exception ex)
             {
@@ -69,13 +104,13 @@ internal class Program
             }
 
         //HILO QUE MANEJA LOS CLIENTES
-        static async Task HandleClient(TcpClient client, Program program)
+        static async Task HandleClient(TcpClient client, Program program, CancellationToken cancellationToken)
         {
             var clientIsConnected = true;
             User connectedUser = null;
             var networkDataHelper = new NetworkDataHelper(client);
 
-            while (clientIsConnected)
+            while (clientIsConnected && !cancellationToken.IsCancellationRequested)
                 try
                 {
                     while (connectedUser == null)
@@ -88,6 +123,11 @@ internal class Program
                                 connectedUser = await LoginUser(networkDataHelper);
                                 break;
                             case "3":
+                                lock (_lock)
+                                {
+                                    ConnectedClients.Remove(client);
+                                }
+                                client.Close();
                                 clientIsConnected = false;
                                 break;
                         }
