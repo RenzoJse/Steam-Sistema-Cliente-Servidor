@@ -151,7 +151,7 @@ internal class Program
                                 await program.PublishGame(networkDataHelper, connectedUser, client);
                                 break;
                             case "6":
-                                await program.EditPublishedGame(networkDataHelper, connectedUser);
+                                await program.EditPublishedGame(networkDataHelper, connectedUser, client);
                                 break;
                             case "7":
                                 await DeleteGame(networkDataHelper, connectedUser);
@@ -459,7 +459,7 @@ internal class Program
         await SuccesfulResponse(response.ToString(), networkDataHelper);
     }
 
-    private async Task EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser)
+    private async Task EditPublishedGame(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
     {
         Console.WriteLine("Database.EditPublishedGame - Initiated");
 
@@ -519,18 +519,18 @@ internal class Program
                             else
                                 throw new ArgumentException("Invalid number format.");
                             break;
-                        // case "cover image":  // Comentado para evitar error de excepcion, logica implementada
-                        //     string imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{game.Name}.jpg");
-                        //     if (File.Exists(imagePath))
-                        //     {
-                        //         File.Delete(imagePath);
-                        //         Console.WriteLine("Existing cover image deleted.");
-                        //     }
-                        //     Console.WriteLine("Receiving new cover image...");
-                        //     var fileCommonHandler = new FileCommsHandler(socketClient);
-                        //     fileCommonHandler.ReceiveFile(game.Name);
-                        //     Console.WriteLine("New cover image received!");
-                        //     break;
+                        case "cover image":  
+                            var variableSubida = await ReceiveStringData(networkDataHelper);
+                            
+                            if (variableSubida == "yes")
+                            {
+                                Console.WriteLine("Image incoming...");
+                                var fileCommonHandler = new FileCommsHandler(client);
+                                await fileCommonHandler.ReceiveFile(gameName);
+                                Console.WriteLine("Image received!");
+                            }
+                            
+                            break;
                         default:
                             throw new ArgumentException("Invalid field.");
                     }

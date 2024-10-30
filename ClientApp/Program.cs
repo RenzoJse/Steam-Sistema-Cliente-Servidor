@@ -208,8 +208,8 @@ namespace ClientApp
                 Console.WriteLine("4. Platform");
                 Console.WriteLine("5. Publisher");
                 Console.WriteLine("6. Units Available");
-                // Console.WriteLine("7. Cover Image");
-                Console.WriteLine("7. Finish");
+                 Console.WriteLine("7. Cover Image");
+                Console.WriteLine("8. Finish");
 
                 string option = Console.ReadLine();
                 string field = string.Empty;
@@ -262,16 +262,27 @@ namespace ClientApp
                         }
 
                         break;
-                    // case "7":  // Comentado para evitar error de excpecion, logica implementada
-                    //     field = "cover image";
-                    //     SendMessage("deleteExistingCover");
-                    //     Console.WriteLine("Enter the full path of the file to send:");
-                    //     string abspath = Console.ReadLine();
-                    //     var fileCommonHandler = new FileCommsHandler(client);
-                    //     fileCommonHandler.SendFile(abspath);
-                    //     Console.WriteLine("The new cover image has been sent to the server.");
-                    //     continue;
                     case "7":
+                        Console.Write("Do you want to upload a cover image? (yes/no)");
+                        var variableSubida = Console.ReadLine();
+                        await SendMessage(variableSubida!);
+
+                        
+                        if (variableSubida == "yes")
+                        {
+                            Console.WriteLine("Enter the full path of the file to send:");
+                            var abspath = Console.ReadLine();
+                            var fileCommonHandler = new FileCommsHandler(client);
+                            await fileCommonHandler.SendFile(abspath!);
+                            Console.WriteLine("The file was sent to the server");
+                        }
+
+                        Console.WriteLine("");
+                        Console.WriteLine("Game published successfully.");
+                        Console.WriteLine("");
+                        break;
+
+                    case "8":
                         Console.WriteLine("Finished modifying.");
                         modifying = false;
                         SendMessage("finishModification");
