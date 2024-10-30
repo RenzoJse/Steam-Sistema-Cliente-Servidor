@@ -12,13 +12,13 @@ internal class Program
     private static readonly SettingsManager SettingsMngr = new();
     private static readonly UserManager UserManager = new();
     private static readonly GameManager GameManager = new();
-    private static List<TcpClient> ConnectedClients = [];
+    private static readonly List<TcpClient> ConnectedClients = [];
     private const int LargoDataLength = 4; // Pasar a una clase con constantes del protocolo
 
     private static bool _serverRunning = true;
     private static readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
     private static readonly CancellationToken CancellationToken = CancellationTokenSource.Token;
-    private static object _lock = new object();
+    private static readonly object Lock = new object();
 
     public static UserManager GetInstance()
     {
@@ -39,7 +39,7 @@ internal class Program
         // Hilo para manejar la entrada de la consola del servidor
 
         Console.WriteLine("Type 'shutdown' to close the server");
-        Task.Run(async () =>
+        await Task.Run(async () =>
         {
             while (_serverRunning)
             {
@@ -69,7 +69,7 @@ internal class Program
                     }
                     else
                     {
-                        lock (_lock)
+                        lock (Lock)
                         {
                             foreach (var client in ConnectedClients)
                             {
@@ -90,7 +90,7 @@ internal class Program
             {
                 var programInstance = new Program();
                 var client = await server.AcceptTcpClientAsync(); // El accept es bloqueante, espera hasta que llega una nueva conexión
-                lock (_lock)
+                lock (Lock)
                 {
                     ConnectedClients.Add(client);
                 }
@@ -123,7 +123,7 @@ internal class Program
                                 connectedUser = await LoginUser(networkDataHelper);
                                 break;
                             case "3":
-                                lock (_lock)
+                                lock (Lock)
                                 {
                                     ConnectedClients.Remove(client);
                                 }
