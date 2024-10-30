@@ -220,7 +220,7 @@ internal static class Program
                     field = "title";
                     Console.Write("Enter new title: ");
                     newValue = Console.ReadLine();
-                    await SendMessage("modifyField"); // Indica al servidor que se modificará un campo
+                    await SendMessage("modifyField"); 
                     await SendMessage(field);
                     await SendMessage(newValue);
                     break;
@@ -279,7 +279,7 @@ internal static class Program
                 case "7":
                     Console.Write("Do you want to upload a cover image? (yes/no): ");
                     var variableSubida = Console.ReadLine();
-                    await SendMessage("coverImageConfirmation");  // Indica al servidor que se va a trabajar con la imagen
+                    await SendMessage("coverImageConfirmation");  
                     await SendMessage(variableSubida!);
 
                     if (variableSubida == "yes")
