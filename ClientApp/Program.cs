@@ -220,34 +220,47 @@ internal static class Program
                     field = "title";
                     Console.Write("Enter new title: ");
                     newValue = Console.ReadLine();
+                    await SendMessage("modifyField"); // Indica al servidor que se modificará un campo
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "2":
                     field = "genre";
                     Console.Write("Enter new genre: ");
                     newValue = Console.ReadLine();
+                    await SendMessage("modifyField");
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "3":
                     field = "release date";
                     Console.Write("Enter new release date (dd/mm/yyyy): ");
                     newValue = Console.ReadLine();
                     DateTime releaseDate;
-                    while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null,
-                               DateTimeStyles.None, out releaseDate))
+                    while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null, DateTimeStyles.None, out releaseDate))
                     {
                         Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
                         newValue = Console.ReadLine();
                     }
-
+                    await SendMessage("modifyField");
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "4":
                     field = "platform";
                     Console.Write("Enter new platform: ");
                     newValue = Console.ReadLine();
+                    await SendMessage("modifyField");
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "5":
                     field = "publisher";
                     Console.Write("Enter new publisher: ");
                     newValue = Console.ReadLine();
+                    await SendMessage("modifyField");
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "6":
                     field = "units available";
@@ -259,13 +272,15 @@ internal static class Program
                         Console.WriteLine("Invalid input. Please enter a valid integer for units available.");
                         newValue = Console.ReadLine();
                     }
-
+                    await SendMessage("modifyField");
+                    await SendMessage(field);
+                    await SendMessage(newValue);
                     break;
                 case "7":
-                    Console.Write("Do you want to upload a cover image? (yes/no)");
+                    Console.Write("Do you want to upload a cover image? (yes/no): ");
                     var variableSubida = Console.ReadLine();
+                    await SendMessage("coverImageConfirmation");  // Indica al servidor que se va a trabajar con la imagen
                     await SendMessage(variableSubida!);
-
 
                     if (variableSubida == "yes")
                     {
@@ -275,25 +290,17 @@ internal static class Program
                         await fileCommonHandler.SendFile(abspath!);
                         Console.WriteLine("The file was sent to the server");
                     }
-
-                    Console.WriteLine("");
-                    Console.WriteLine("Game published successfully.");
-                    Console.WriteLine("");
                     break;
 
                 case "8":
                     Console.WriteLine("Finished modifying.");
                     modifying = false;
-                    SendMessage("finishModification");
+                    await SendMessage("finishModification");
                     continue;
                 default:
                     Console.WriteLine("Invalid option. Please try again.");
                     continue;
             }
-
-            await SendMessage("modifyField");
-            await SendMessage(field);
-            await SendMessage(newValue);
 
             var modifyResponse = await ReceiveMessage();
             Console.WriteLine(modifyResponse);
@@ -308,6 +315,7 @@ internal static class Program
             }
         }
     }
+
 
     private static async Task DeleteGame()
     {

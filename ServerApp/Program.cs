@@ -479,68 +479,83 @@ internal class Program
         {
             var action = await ReceiveStringData(networkDataHelper);
 
-            if (action == "8")
+            switch (action)
             {
-                modifying = false;
-                Console.WriteLine("Modification finished for game: " + game.Name);
-                continue;
-            }
+                case "modifyField":
+                    var field = await ReceiveStringData(networkDataHelper);
+                    var newValue = await ReceiveStringData(networkDataHelper);
+                    await UpdateGameField(game, field, newValue, networkDataHelper);
+                    break;
 
-            var field = await ReceiveStringData(networkDataHelper);
-            var newValue = await ReceiveStringData(networkDataHelper);
+                case "coverImageConfirmation":
+                    var uploadImage = await ReceiveStringData(networkDataHelper);
+                    if (uploadImage == "yes")
+                    {
+                        Console.WriteLine("Image incoming...");
+                        var fileCommonHandler = new FileCommsHandler(client);
+                        await fileCommonHandler.ReceiveFile(game.Name);
+                        Console.WriteLine("Image received!");
+                        await SuccesfulResponse("Cover image updated successfully", networkDataHelper);
+                    }
+                    else
+                    {
+                        await SuccesfulResponse("Cover image upload was skipped.", networkDataHelper);
+                    }
+                    break;
 
-            try
-            {
-                switch (field.ToLower())
-                {
-                    case "title":
-                        game.Name = newValue;
-                        break;
-                    case "genre":
-                        game.Genre = newValue;
-                        break;
-                    case "release date":
-                        if (DateTime.TryParse(newValue, out var newReleaseDate))
-                            game.ReleaseDate = newReleaseDate;
-                        else
-                            throw new ArgumentException("Invalid date format.");
-                        break;
-                    case "platform":
-                        game.Platform = newValue;
-                        break;
-                    case "publisher":
-                        game.Publisher = newValue;
-                        break;
-                    case "units available":
-                        if (int.TryParse(newValue, out var newUnitsAvailable))
-                            game.UnitsAvailable = newUnitsAvailable;
-                        else
-                            throw new ArgumentException("Invalid number format.");
-                        break;
-                    case "cover image":
-                        var variableSubida = await ReceiveStringData(networkDataHelper);
+                case "finishModification":
+                    modifying = false;
+                    Console.WriteLine("Modification finished for game: " + game.Name);
+                    break;
 
-                        if (variableSubida == "yes")
-                        {
-                            Console.WriteLine("Image incoming...");
-                            var fileCommonHandler = new FileCommsHandler(client);
-                            await fileCommonHandler.ReceiveFile(gameName);
-                            Console.WriteLine("Image received!");
-                        }
-
-                        break;
-                    default:
-                        throw new ArgumentException("Invalid field.");
-                }
-
-                await SuccesfulResponse("Game edited successfully", networkDataHelper);
-            }
-            catch (ArgumentException ex)
-            {
-                await SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
+                default:
+                    await SuccesfulResponse("Error: Unknown action.", networkDataHelper);
+                    break;
             }
         }
     }
+
+    private async Task UpdateGameField(Game game, string field, string newValue, NetworkDataHelper networkDataHelper)
+    {
+        try
+        {
+            switch (field.ToLower())
+            {
+                case "title":
+                    game.Name = newValue;
+                    break;
+                case "genre":
+                    game.Genre = newValue;
+                    break;
+                case "release date":
+                    if (DateTime.TryParse(newValue, out var newReleaseDate))
+                        game.ReleaseDate = newReleaseDate;
+                    else
+                        throw new ArgumentException("Invalid date format.");
+                    break;
+                case "platform":
+                    game.Platform = newValue;
+                    break;
+                case "publisher":
+                    game.Publisher = newValue;
+                    break;
+                case "units available":
+                    if (int.TryParse(newValue, out var newUnitsAvailable))
+                        game.UnitsAvailable = newUnitsAvailable;
+                    else
+                        throw new ArgumentException("Invalid number format.");
+                    break;
+                default:
+                    throw new ArgumentException("Invalid field.");
+            }
+            await SuccesfulResponse("Game edited successfully", networkDataHelper);
+        }
+        catch (ArgumentException ex)
+        {
+            await SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
+        }
+    }
+
 
     private async Task PurchaseGame(NetworkDataHelper networkDataHelper, User connectedUser)
     {
