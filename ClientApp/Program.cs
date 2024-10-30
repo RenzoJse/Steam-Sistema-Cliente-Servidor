@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Globalization;
+using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using Comunicacion;
@@ -209,96 +210,96 @@ internal static class Program
             Console.WriteLine("7. Cover Image");
             Console.WriteLine("8. Finish");
 
-            string option = Console.ReadLine();
-            string field;
-            string newValue;
+            var option = Console.ReadLine();
+            var field = string.Empty;
+            var newValue = string.Empty;
 
             switch (option)
             {
                 case "1":
                     field = "title";
                     Console.Write("Enter new title: ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     break;
                 case "2":
                     field = "genre";
                     Console.Write("Enter new genre: ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     break;
                 case "3":
                     field = "release date";
                     Console.Write("Enter new release date (dd/mm/yyyy): ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     DateTime releaseDate;
                     while (!DateTime.TryParseExact(newValue, "dd/MM/yyyy", null,
-                               System.Globalization.DateTimeStyles.None, out releaseDate))
+                               DateTimeStyles.None, out releaseDate))
                     {
                         Console.WriteLine("Invalid date format. Please enter the date in the format dd/mm/yyyy.");
-                        newValue = Console.ReadLine()!;
+                        newValue = Console.ReadLine();
                     }
 
                     break;
                 case "4":
                     field = "platform";
                     Console.Write("Enter new platform: ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     break;
                 case "5":
                     field = "publisher";
                     Console.Write("Enter new publisher: ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     break;
                 case "6":
                     field = "units available";
                     Console.Write("Enter new units available: ");
-                    newValue = Console.ReadLine()!;
+                    newValue = Console.ReadLine();
                     int units;
                     while (!int.TryParse(newValue, out units))
                     {
                         Console.WriteLine("Invalid input. Please enter a valid integer for units available.");
-                        newValue = Console.ReadLine()!;
+                        newValue = Console.ReadLine();
                     }
 
-                        break;
-                    case "7":
-                        Console.Write("Do you want to upload a cover image? (yes/no)");
-                        var variableSubida = Console.ReadLine();
-                        await SendMessage(variableSubida!);
+                    break;
+                case "7":
+                    Console.Write("Do you want to upload a cover image? (yes/no)");
+                    var variableSubida = Console.ReadLine();
+                    await SendMessage(variableSubida!);
 
 
-                        if (variableSubida == "yes")
-                        {
-                            Console.WriteLine("Enter the full path of the file to send:");
-                            var abspath = Console.ReadLine();
-                            var fileCommonHandler = new FileCommsHandler(client);
-                            await fileCommonHandler.SendFile(abspath!);
-                            Console.WriteLine("The file was sent to the server");
-                        }
+                    if (variableSubida == "yes")
+                    {
+                        Console.WriteLine("Enter the full path of the file to send:");
+                        var abspath = Console.ReadLine();
+                        var fileCommonHandler = new FileCommsHandler(client);
+                        await fileCommonHandler.SendFile(abspath!);
+                        Console.WriteLine("The file was sent to the server");
+                    }
 
-                        Console.WriteLine("");
-                        Console.WriteLine("Game published successfully.");
-                        Console.WriteLine("");
-                        break;
+                    Console.WriteLine("");
+                    Console.WriteLine("Game published successfully.");
+                    Console.WriteLine("");
+                    break;
 
-                    case "8":
-                        Console.WriteLine("Finished modifying.");
-                        modifying = false;
-                        SendMessage("finishModification");
-                        continue;
-                    default:
-                        Console.WriteLine("Invalid option. Please try again.");
-                        continue;
-                }
+                case "8":
+                    Console.WriteLine("Finished modifying.");
+                    modifying = false;
+                    SendMessage("finishModification");
+                    continue;
+                default:
+                    Console.WriteLine("Invalid option. Please try again.");
+                    continue;
+            }
 
             await SendMessage("modifyField");
             await SendMessage(field);
             await SendMessage(newValue);
 
-            string modifyResponse = await ReceiveMessage();
+            var modifyResponse = await ReceiveMessage();
             Console.WriteLine(modifyResponse);
 
             Console.WriteLine("Do you want to modify another attribute? (yes/no)");
-            string continueModifying = Console.ReadLine().ToLower();
+            var continueModifying = Console.ReadLine().ToLower();
             if (continueModifying != "yes")
             {
                 modifying = false;

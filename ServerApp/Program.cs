@@ -39,7 +39,7 @@ internal class Program
         // Hilo para manejar la entrada de la consola del servidor
 
         Console.WriteLine("Type 'shutdown' to close the server");
-        await Task.Run(async () =>
+        Task.Run(async () =>
         {
             while (_serverRunning)
             {
@@ -479,68 +479,65 @@ internal class Program
         {
             var action = await ReceiveStringData(networkDataHelper);
 
-            if (action == "finishModification")
+            if (action == "8")
             {
                 modifying = false;
                 Console.WriteLine("Modification finished for game: " + game.Name);
                 continue;
             }
 
-            if (action == "modifyField")
+            var field = await ReceiveStringData(networkDataHelper);
+            var newValue = await ReceiveStringData(networkDataHelper);
+
+            try
             {
-                var field = await ReceiveStringData(networkDataHelper);
-                var newValue = await ReceiveStringData(networkDataHelper);
-
-                try
+                switch (field.ToLower())
                 {
-                    switch (field.ToLower())
-                    {
-                        case "title":
-                            game.Name = newValue;
-                            break;
-                        case "genre":
-                            game.Genre = newValue;
-                            break;
-                        case "release date":
-                            if (DateTime.TryParse(newValue, out var newReleaseDate))
-                                game.ReleaseDate = newReleaseDate;
-                            else
-                                throw new ArgumentException("Invalid date format.");
-                            break;
-                        case "platform":
-                            game.Platform = newValue;
-                            break;
-                        case "publisher":
-                            game.Publisher = newValue;
-                            break;
-                        case "units available":
-                            if (int.TryParse(newValue, out var newUnitsAvailable))
-                                game.UnitsAvailable = newUnitsAvailable;
-                            else
-                                throw new ArgumentException("Invalid number format.");
-                            break;
-                        case "cover image":  
-                            var variableSubida = await ReceiveStringData(networkDataHelper);
-                            
-                            if (variableSubida == "yes")
-                            {
-                                Console.WriteLine("Image incoming...");
-                                var fileCommonHandler = new FileCommsHandler(client);
-                                await fileCommonHandler.ReceiveFile(gameName);
-                                Console.WriteLine("Image received!");
-                            }
-                            
-                            break;
-                        default:
-                            throw new ArgumentException("Invalid field.");
-                    }
+                    case "title":
+                        game.Name = newValue;
+                        break;
+                    case "genre":
+                        game.Genre = newValue;
+                        break;
+                    case "release date":
+                        if (DateTime.TryParse(newValue, out var newReleaseDate))
+                            game.ReleaseDate = newReleaseDate;
+                        else
+                            throw new ArgumentException("Invalid date format.");
+                        break;
+                    case "platform":
+                        game.Platform = newValue;
+                        break;
+                    case "publisher":
+                        game.Publisher = newValue;
+                        break;
+                    case "units available":
+                        if (int.TryParse(newValue, out var newUnitsAvailable))
+                            game.UnitsAvailable = newUnitsAvailable;
+                        else
+                            throw new ArgumentException("Invalid number format.");
+                        break;
+                    case "cover image":
+                        var variableSubida = await ReceiveStringData(networkDataHelper);
 
-                    await SuccesfulResponse("Game edited successfully", networkDataHelper);
+                        if (variableSubida == "yes")
+                        {
+                            Console.WriteLine("Image incoming...");
+                            var fileCommonHandler = new FileCommsHandler(client);
+                            await fileCommonHandler.ReceiveFile(gameName);
+                            Console.WriteLine("Image received!");
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentException("Invalid field.");
                 }
-                catch (ArgumentException ex)
-                {
-                    await SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
-                }
+
+                await SuccesfulResponse("Game edited successfully", networkDataHelper);
+            }
+            catch (ArgumentException ex)
+            {
+                await SuccesfulResponse($"Error: {ex.Message}", networkDataHelper);
             }
         }
     }
