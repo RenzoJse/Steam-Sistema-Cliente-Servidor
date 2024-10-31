@@ -491,6 +491,12 @@ internal class Program
                     var uploadImage = await ReceiveStringData(networkDataHelper);
                     if (uploadImage == "yes")
                     {
+                        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{game.Name}.jpg");
+                        if (File.Exists(imagePath))
+                        {
+                            File.Delete(imagePath);
+                            Console.WriteLine("Existing image deleted.");
+                        }
                         Console.WriteLine("Image incoming...");
                         var fileCommonHandler = new FileCommsHandler(client);
                         await fileCommonHandler.ReceiveFile(game.Name);
