@@ -5,15 +5,17 @@ using Communication;
 using Comunicacion;
 using Comunicacion.Dominio;
 using ServerApp.Dominio;
+using ServerApp.MomMessage;
 
 namespace ServerApp.TCP;
 
 public class TcpServer
 {
     private static readonly UserManager UserManager = new UserManager();
-    private static readonly GameManager GameManager = new();
+    private static readonly GameManager GameManager = new GameManager();
     private const int LargoDataLength = 4;
 
+    private static SendMom _sendMom = new SendMom();
     private readonly TcpListener _server;
     private readonly List<TcpClient> _connectedClients = [];
     private readonly object _lock = new();
@@ -186,6 +188,12 @@ public class TcpServer
         {
             Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
             await SuccesfulResponse("User registered successfully", networkDataHelper);
+            int i = 0;
+            while (i<10000)
+            {
+                _sendMom.SendMessageToMom("se registro un nuevo usuario");
+                i++;
+            }
         }
         else
         {

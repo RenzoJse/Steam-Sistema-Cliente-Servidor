@@ -1,4 +1,6 @@
-﻿namespace Comunicacion.Dominio;
+﻿using Comunicacion.Dominio;
+
+namespace ServerApp.Dominio;
 
 public class User
 {

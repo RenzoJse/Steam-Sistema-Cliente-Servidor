@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using Comunicacion.Dominio;
 
-namespace Comunicacion.Dominio
+namespace ServerApp.Dominio
 {
     public class UserManager
     {
-        private static List<User> _users = new List<User>();
+        private static List<User> _users = [];
         private static object _lock = new object();
 
         public UserManager()

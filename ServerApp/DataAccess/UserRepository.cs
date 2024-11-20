@@ -1,4 +1,5 @@
 ﻿using Comunicacion.Dominio;
+using ServerApp.Dominio;
 
 namespace ServerApp.DataAccess;
 
@@ -9,7 +10,7 @@ public class UserRepository
 
     public UserRepository()
     {
-        _users = new List<User>();
+        _users = [];
     }
 
     public bool RegisterUser(string username, string password)
