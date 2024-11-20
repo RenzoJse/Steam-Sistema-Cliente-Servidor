@@ -9,38 +9,51 @@ namespace StatsServer
         private readonly IConnection _connection;
         private readonly IModel _channel;
 
-        public StatsServer()
+        class Program
         {
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-
-            _channel.QueueDeclare(queue: "stats_queue",
-                durable: false,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null);
-        }
-
-        public void StartListening()
-        {
-            var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += (model, ea) =>
+            static void Main(string[] args)
             {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine(" [x] Received {0}", message);
-                // Aquí puedes procesar el mensaje y actualizar las estadísticas
-            };
-            _channel.BasicConsume(queue: "stats_queue",
-                autoAck: true,
-                consumer: consumer);
+                var statsServer = new StatsServer();
+                statsServer.RecieveMomMessage();
+            }
         }
 
-        public void Stop()
+        private void RecieveMomMessage()
         {
-            _channel.Close();
-            _connection.Close();
+            // 1 - Defino la conexion
+            var factory = new ConnectionFactory() { HostName = "localhost" };
+            using (var connection = factory.CreateConnection())
+            using (var channel = connection.CreateModel())
+            {
+                // En el canal defino la cola
+                channel.QueueDeclare(queue: "the_first",
+                    durable: false,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                // Tengo que definir un consumer
+                // Defino el mecanismo de consumo
+                var consumer = new EventingBasicConsumer(channel);
+
+                consumer.Received += (sender, eventArgs) =>
+                {
+                    var body = eventArgs.Body.ToArray();
+
+                    var message = Encoding.UTF8.GetString(body);
+                    Console.WriteLine(" Message received => {0}", message);
+
+                };
+
+                // "PRENDO" el consumo de mensajes
+                // El ack es la confirmacion para que la cola lo borre
+                channel.BasicConsume(queue: "the_first",
+                    autoAck: true,
+                    consumer: consumer);
+
+                Console.WriteLine(" Press [enter] to exit.");
+                Console.ReadLine();
+            }
         }
     }
 }

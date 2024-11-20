@@ -7,7 +7,7 @@ public class SendMom
 {
     public void SendMessageToMom(string sendMessage)
     {
-        Console.WriteLine("Bienvenido al RabbitMQ Sender.....!!");
+        Console.WriteLine("Enviando mensaje a mama");
 
         // 1 - Definimos un FACTORY para inicializar la conexion
         // Esto es exclusivo de Rabbit, le indicamos donde esta el servidor de Rabbit
