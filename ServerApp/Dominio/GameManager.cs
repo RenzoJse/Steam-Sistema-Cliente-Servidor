@@ -1,4 +1,6 @@
-﻿namespace Comunicacion.Dominio
+﻿using Comunicacion.Dominio;
+
+namespace ServerApp.Dominio
 {
     public class GameManager
     {
@@ -10,7 +12,7 @@
             PreLoadedGames();
         }
 
-        public Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
+        public static Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
             int price, int valoration, User owner)
         {
             lock(_lock)
@@ -32,8 +34,8 @@
                 return newGame;
             }
         }
-        
-        public List<Game> GetAllGames()
+
+        public static List<Game> GetAllGames()
         {
             lock (_lock)
             {
@@ -54,7 +56,7 @@
             }
         }
 
-        public void RemoveGame(string name)
+        public static void RemoveGame(string name)
         {
             lock (_lock)
             {
@@ -66,7 +68,7 @@
             }
         }
 
-        public void DiscountPurchasedGame(Game game)
+        public static void DiscountPurchasedGame(Game game)
         {
             lock (_lock)
             {
@@ -76,7 +78,7 @@
             }
         }
 
-        public bool DoesGameExist(string name)
+        public static bool DoesGameExist(string name)
         {
             lock (_lock)
             {
@@ -84,7 +86,7 @@
             }
         }
 
-        public void AddValoration(string name, int valoration)
+        public static void AddValoration(string name, int valoration)
         {
             lock (_lock)
             {
@@ -95,8 +97,8 @@
                 }
             }
         }
-        
-        public void AddReview(string name, Review review)
+
+        public static void AddReview(string name, Review review)
         {
             lock (_lock)
             {
@@ -108,7 +110,7 @@
             }
         }
 
-        public List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
+        public static List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
         {
             lock (_lock)
             {
