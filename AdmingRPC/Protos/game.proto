@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option csharp_namespace = "AdmingRPC";
+
+package game;
+
+service Game {
+  rpc AddGame (GameRequest) returns (GameResponse);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message GameRequest {
+  string name = 1;
+  string genre = 2;
+  string ReleaseDate = 3; 
+  string platform = 4;
+  int32 unitsAvailable = 5;
+  int32 price = 6;
+}
+
+
+message GameResponse {
+  string message = 1;
+}

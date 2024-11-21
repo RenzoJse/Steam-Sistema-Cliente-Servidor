@@ -1,11 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="gRPC\**" />
+    <EmbeddedResource Remove="gRPC\**" />
+    <None Remove="gRPC\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" Version="6.7.0" />
@@ -14,10 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Comunicacion\Comunicacion.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="gRPC\" />
   </ItemGroup>
 
 </Project>

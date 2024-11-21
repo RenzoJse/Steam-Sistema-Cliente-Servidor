@@ -8,11 +8,11 @@ using ServerApp.TCP;
 
 namespace ServerApp;
 
-internal class Program
+public class Program
 {
     private static readonly SettingsManager SettingsMngr = new();
 
-    private static Task Main(string[] args)
+    public static Task IniciarServerTcp()
     {
         Console.WriteLine("Starting Server Application...");
 

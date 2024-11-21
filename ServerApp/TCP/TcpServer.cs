@@ -269,6 +269,64 @@ public class TcpServer
             throw new InvalidOperationException("Game not found.");
         }
     }
+    public async Task PublishGamegRCP(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
+    {
+        Console.WriteLine("Database.PublishGame - Initiated");
+        Console.WriteLine("Database.PublishGame - Executing");
+
+        // Obtener el nombre del juego y verificar si ya existe
+        var gameName = await ReceiveStringData(networkDataHelper);
+        var gameExists = GameManager.DoesGameExist(gameName);
+        while (gameExists)
+        {
+            await SuccesfulResponse("Error: That Game Already Exists.", networkDataHelper);
+            gameName = await ReceiveStringData(networkDataHelper);
+            gameExists = GameManager.DoesGameExist(gameName);
+            if (!gameExists) await SuccesfulResponse("Successful New Game Name", networkDataHelper);
+        }
+
+        await SuccesfulResponse("Successful New Game Name", networkDataHelper);
+
+        // Obtener el género
+        var genre = await ReceiveStringData(networkDataHelper);
+
+        // Obtener la fecha de lanzamiento
+        var releaseDateInput = await ReceiveStringData(networkDataHelper);
+        if (!DateTime.TryParseExact(releaseDateInput, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var releaseDate))
+        {
+            await SuccesfulResponse("Error: Invalid Date Format. Please use dd/MM/yyyy.", networkDataHelper);
+            return;
+        }
+
+        // Obtener la plataforma
+        var platform = await ReceiveStringData(networkDataHelper);
+
+        // Obtener la cantidad de unidades disponibles
+        var unitsAvailableInput = await ReceiveStringData(networkDataHelper);
+        if (!int.TryParse(unitsAvailableInput, out var unitsAvailable))
+        {
+            await SuccesfulResponse("Error: Invalid Number Format for Units Available.", networkDataHelper);
+            return;
+        }
+
+        // Obtener el precio
+        var priceInput = await ReceiveStringData(networkDataHelper);
+        if (!int.TryParse(priceInput, out var price))
+        {
+            await SuccesfulResponse("Error: Invalid Number Format for Price.", networkDataHelper);
+            return;
+        }
+
+        // Crear el nuevo juego
+        var valoration = 0;
+        var newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price, valoration, connectedUser);
+
+        // Publicar el juego
+        UserManager.PublishGame(newGame, connectedUser);
+
+        await SuccesfulResponse($"Game '{gameName}' Published Successfully.", networkDataHelper);
+    }
+
 
 
     private async Task PublishGame(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
