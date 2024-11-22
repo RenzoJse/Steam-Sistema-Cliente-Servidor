@@ -631,6 +631,7 @@ public class TcpServer
             GameManager.DiscountPurchasedGame(game);
             Console.WriteLine("Database.PurchaseGame - The game: " + game.Name + " has been purchased");
             await SuccesfulResponse("Game purchased successfully", networkDataHelper);
+            SendMom.SendMessageToMom("Buy Game: " + gameName);
         }
         else
         {

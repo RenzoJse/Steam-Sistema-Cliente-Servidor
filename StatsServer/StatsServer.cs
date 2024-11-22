@@ -25,7 +25,7 @@ namespace StatsServer
             var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
 
-            channel.QueueDeclare(queue: "the_first", // en el canal, definimos la Queue de la conexion
+            channel.QueueDeclare(queue: "steam_logs", // en el canal, definimos la Queue de la conexion
                 durable: false,
                 exclusive: false,
                 autoDelete: false,
@@ -44,33 +44,52 @@ namespace StatsServer
                     _statsData.IncrementTotalLogins();
                     Console.WriteLine("Total logins incremented. Current total: {0}", _statsData.GetTotalLogins());
                 }
+
                 if (message.Contains("New Game"))
                 {
-                    Console.WriteLine(message);
-
-                    var parts = message.Split(["New Game Published: "], StringSplitOptions.None)[1].Split('-');
-
-                    var game = new Game
-                    {
-                        Name = parts[0],
-                        Genre = parts[1],
-                        ReleaseDate = DateTime.Parse(parts[2]),
-                        Platform = parts[3],
-                        UnitsAvailable = int.Parse(parts[4]),
-                        Price = int.Parse(parts[5]),
-                        Valoration = int.Parse(parts[6]),
-                        Publisher = parts[7]
-                    };
-
-                    _gameRepository.AddGame(game);
-                    Console.WriteLine("New game added: " + game.Name);
+                    AddNewGame(message);
                 }
+
+                if (message.Contains("Buy Game"))
+                {
+                    ModifyGameUnits(message);
+                }
+
             };
 
             //"PRENDO" el consumo de mensajes
-            channel.BasicConsume(queue: "the_first",
+            channel.BasicConsume(queue: "steam_logs",
                 autoAck: true,
                 consumer: consumer);
+        }
+
+        private void ModifyGameUnits(string message)
+        {
+            var gameName = message.Split(["Buy Game: "], StringSplitOptions.None)[1].Trim();
+            var game = _gameRepository.GetGameByName(gameName);
+            _gameRepository.DiscountPurchasedGame(game);
+        }
+
+        private void AddNewGame(string message)
+        {
+            Console.WriteLine(message);
+
+            var parts = message.Split(["New Game Published: "], StringSplitOptions.None)[1].Split('-');
+
+            var game = new Game
+            {
+                Name = parts[0],
+                Genre = parts[1],
+                ReleaseDate = DateTime.Parse(parts[2]),
+                Platform = parts[3],
+                UnitsAvailable = int.Parse(parts[4]),
+                Price = int.Parse(parts[5]),
+                Valoration = int.Parse(parts[6]),
+                Publisher = parts[7]
+            };
+
+            _gameRepository.AddGame(game);
+            Console.WriteLine("New game added: " + game.Name);
         }
     }
 }

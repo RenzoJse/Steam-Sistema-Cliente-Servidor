@@ -28,7 +28,7 @@ public class SendMom
             // Indicamos el nombre de la cola que vamos a utilizar, en este caso "the_first"
             // QueueDeclare lo que hace es crear la cola si no existe o vincularme si ya esta creada
 
-            channel.QueueDeclare("the_first",
+            channel.QueueDeclare("steam_logs",
                 false,
                 false,
                 false,
@@ -44,7 +44,7 @@ public class SendMom
             // El body es el cuerpo del mansaje que enviamos
 
             channel.BasicPublish("",
-                "the_first",
+                "steam_logs",
                 null,
                 body);
         }
