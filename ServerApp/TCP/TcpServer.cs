@@ -188,7 +188,6 @@ public class TcpServer
         {
             Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
             await SuccesfulResponse("User registered successfully", networkDataHelper);
-            SendMom.SendMessageToMom("New User Registered");
         }
         else
         {
@@ -214,6 +213,7 @@ public class TcpServer
         if (user == null) throw new InvalidOperationException("Invalid username or password.");
         await SuccesfulResponse("Login successful", networkDataHelper);
         Console.WriteLine("User " + user.Username + " has logged in.");
+        SendMom.SendMessageToMom("New Login User: " + user.Username);
         return user;
     }
 
@@ -370,6 +370,7 @@ public class TcpServer
         var newGame = GameManager.CreateNewGame(gameName, genre, releaseDate, platform, unitsAvailable, price,
             valoration, connectedUser);
         UserManager.PublishGame(newGame, connectedUser);
+        SendMom.SendMessageToMom("New Game Published: " +gameName + "-" + genre + "-" + releaseDate + "-" + platform + "-" + unitsAvailable + "-" + price + "-" +valoration + "-" + connectedUser);
     }
 
     private static async Task<string> ReceiveStringData(NetworkDataHelper networkDataHelper)

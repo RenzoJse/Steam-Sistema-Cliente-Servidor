@@ -21,7 +21,7 @@ public class StatsData
         _totalUsers = 0;
     }
 
-    public void IncrementTotalUsers()
+    public void IncrementTotalLogins()
     {
         lock (_lock)
         {
@@ -29,7 +29,7 @@ public class StatsData
         }
     }
 
-    public int GetTotalUsers()
+    public int GetTotalLogins()
     {
         lock (_lock)
         {

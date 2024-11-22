@@ -1,4 +1,5 @@
-﻿using StatsServer.DataAccess;
+﻿using ServerApp.DataAccess;
+using StatsServer.DataAccess;
 
 namespace StatsServer
 {
@@ -17,6 +18,7 @@ namespace StatsServer
             services.AddSwaggerGen();
             services.AddSingleton<StatsData>();
             services.AddSingleton<StatsServer>();
+            services.AddSingleton<GameRepository>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
