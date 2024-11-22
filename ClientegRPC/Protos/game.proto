@@ -4,28 +4,54 @@ option csharp_namespace = "ClientegRPC";
 
 package game;
 
-service Game {
+service GameManagement {
   rpc AddGame (GameRequest) returns (GameResponse);
-}
-
-message HelloRequest {
-  string name = 1;
-}
-
-message HelloReply {
-  string message = 1;
+  rpc AddGameInteractive (stream GameData) returns (stream ServerResponse);
+  rpc RemoveGame (RemoveGameRequest) returns (RemoveGameResponse);
+  rpc ModifyGame (ModifyGameRequest) returns (ModifyGameResponse); // Nueva RPC para modificar juegos
 }
 
 message GameRequest {
   string name = 1;
   string genre = 2;
-  string ReleaseDate = 3; 
+  string release_date = 3;
   string platform = 4;
-  int32 unitsAvailable = 5;
+  int32 units_available = 5;
   int32 price = 6;
+  string username = 7; // Campo existente para el usuario
 }
-
 
 message GameResponse {
   string message = 1;
 }
+
+message GameData {
+  string key = 1;
+  string value = 2;
+}
+
+message ServerResponse {
+  string message = 1;
+}
+
+message RemoveGameRequest {
+  string gameName = 1;
+}
+
+message RemoveGameResponse {
+  string message = 1;
+}
+
+message ModifyGameRequest { // Nuevo mensaje para modificar juegos
+  string gameName = 1; // Nombre del juego a modificar
+  string field = 2;    // Campo a modificar
+  string newValue = 3; // Nuevo valor del campo
+}
+
+message ModifyGameResponse { // Respuesta de modificar juegos
+  string message = 1;
+}
+
+
+
+

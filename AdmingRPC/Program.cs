@@ -1,23 +1,31 @@
-using AdmingRPC.Services;
 
-namespace AdmingRPC
-{
-    public class Program
+    using ServerApp.TCP;
+
+    namespace AdmingRPC
     {
-        public static void Main(string[] args)
+        public class Program
         {
-            var builder = WebApplication.CreateBuilder(args);
+            public static void Main(string[] args)
+            {
+                var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddGrpc();
+                builder.Services.AddSingleton<TcpServer>(provider =>
+                {
+                    var ipAddress = "127.0.0.1"; // Cambia esto por la IP que deseas utilizar
+                    var port = 20000;            // Cambia esto por el puerto que deseas utilizar
+                    return new TcpServer(ipAddress, port);
+                });
 
-            var app = builder.Build();
+                builder.Services.AddTransient<GameManagementService>();
+                builder.Services.AddGrpc();
 
-            // Configure the HTTP request pipeline.
-            app.MapGrpcService<GameService>();
-            app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-            var tareaServidorViejo = Task.Run( async ()=> await ServerApp.Program.IniciarServerTcp());
-            app.Run();
+                var app = builder.Build();
+
+                // Configure the HTTP request pipeline.
+                app.MapGrpcService<GameManagementService>();
+                app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+                var tareaServidorViejo = Task.Run( async ()=> await ServerApp.Program.IniciarServerTcp());
+                app.Run();
+            }
         }
     }
-}

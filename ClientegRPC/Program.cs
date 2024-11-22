@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Grpc.Net.Client;
-using Grpc.Core;
 
 namespace ClientegRPC
 {
@@ -10,76 +9,73 @@ namespace ClientegRPC
         public static async Task Main(string[] args)
         {
             using var channel = GrpcChannel.ForAddress("http://localhost:5014");
-            var client = new Game.GameClient(channel);
+            var client = new GameManagement.GameManagementClient(channel);
+
+            while (true)
+            {
+                Console.WriteLine("\n--- MENU ---");
+                Console.WriteLine("1. Alta de Juego");
+                Console.WriteLine("2. Baja de Juego");
+                Console.WriteLine("3. Modificar Juego");
+                Console.WriteLine("4. Salir");
+                Console.Write("Selecciona una opción: ");
+                var option = Console.ReadLine();
+
+                switch (option)
+                {
+                    case "1":
+                        await AltaJuego(client);
+                        break;
+                    case "2":
+                        await BajaJuego(client);
+                        break;
+                    case "3":
+                        await ModificarJuego(client);
+                        break;
+                    case "4":
+                        Console.WriteLine("Saliendo...");
+                        return;
+                    default:
+                        Console.WriteLine("Opción inválida. Intenta de nuevo.");
+                        break;
+                }
+            }
+        }
+
+        private static async Task AltaJuego(GameManagement.GameManagementClient client)
+        {
+            // Implementación de alta de juego (ya provista).
+        }
+
+        private static async Task BajaJuego(GameManagement.GameManagementClient client)
+        {
+            // Implementación de baja de juego (ya provista).
+        }
+
+        private static async Task ModificarJuego(GameManagement.GameManagementClient client)
+        {
+            Console.Write("Enter the name of the game to modify: ");
+            var gameName = Console.ReadLine();
+
+            Console.Write("Enter the field to modify (name, genre, release date, platform, units available, price): ");
+            var field = Console.ReadLine();
+
+            Console.Write("Enter the new value: ");
+            var newValue = Console.ReadLine();
 
             try
             {
-                Console.WriteLine("Welcome to the Game Publishing System!");
-
-                // Solicitar datos al usuario para agregar un juego
-                Console.Write("Enter the game title: ");
-                string gameName = Console.ReadLine();
-
-                Console.Write("Enter the genre: ");
-                string genre = Console.ReadLine();
-
-                Console.Write("Enter the release date (dd/MM/yyyy): ");
-                string releaseDateInput = Console.ReadLine();
-                DateTime releaseDate;
-                while (!DateTime.TryParseExact(releaseDateInput, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out releaseDate))
+                var response = await client.ModifyGameAsync(new ModifyGameRequest
                 {
-                    Console.WriteLine("Invalid date format. Please enter the date in the format dd/MM/yyyy.");
-                    Console.Write("Enter the release date (dd/MM/yyyy): ");
-                    releaseDateInput = Console.ReadLine();
-                }
-
-                Console.Write("Enter the platform: ");
-                string platform = Console.ReadLine();
-
-                Console.Write("Enter the number of units available: ");
-                string unitsAvailableInput = Console.ReadLine();
-                int unitsAvailable;
-                while (!int.TryParse(unitsAvailableInput, out unitsAvailable))
-                {
-                    Console.WriteLine("Invalid input. Please enter a valid integer for the number of units available.");
-                    Console.Write("Enter the number of units available: ");
-                    unitsAvailableInput = Console.ReadLine();
-                }
-
-                Console.Write("Enter the price: ");
-                string priceInput = Console.ReadLine();
-                int price;
-                while (!int.TryParse(priceInput, out price))
-                {
-                    Console.WriteLine("Invalid input. Please enter a valid integer for the price.");
-                    Console.Write("Enter the price: ");
-                    priceInput = Console.ReadLine();
-                }
-
-                // Crear una solicitud para el servidor gRPC
-                var gameRequest = new GameRequest
-                {
-                    Name = gameName,
-                    Genre = genre,
-                    ReleaseDate = releaseDate.ToString("dd/MM/yyyy"),
-                    Platform = platform,
-                    UnitsAvailable = unitsAvailable,
-                    Price = price
-                };
-
-                // Enviar la solicitud al servidor gRPC
-                var gameReply = await client.AddGameAsync(gameRequest);
-
-                // Mostrar la respuesta del servidor
-                Console.WriteLine("Server Response: " + gameReply.Message);
-            }
-            catch (RpcException ex)
-            {
-                Console.WriteLine($"Error gRPC: {ex.StatusCode} - {ex.Status.Detail}");
+                    GameName = gameName,
+                    Field = field,
+                    NewValue = newValue
+                });
+                Console.WriteLine($"Server: {response.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected Error: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
     }

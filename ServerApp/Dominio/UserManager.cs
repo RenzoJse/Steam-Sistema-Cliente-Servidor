@@ -28,6 +28,15 @@ namespace ServerApp.Dominio
             }
         }
 
+        public static User GetUserByUsername(string username)
+        {
+            lock (_lock)
+            {
+                return _users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+
         public static User AuthenticateUser(string username, string password)
         {
             lock (_lock)
