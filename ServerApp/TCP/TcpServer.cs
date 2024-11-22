@@ -15,7 +15,7 @@ public class TcpServer
     private static readonly GameManager GameManager = new GameManager();
     private const int LargoDataLength = 4;
 
-    private static SendMom _sendMom = new SendMom();
+    private static readonly SendMom SendMom = new SendMom();
     private readonly TcpListener _server;
     private readonly List<TcpClient> _connectedClients = [];
     private readonly object _lock = new();
@@ -188,7 +188,7 @@ public class TcpServer
         {
             Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
             await SuccesfulResponse("User registered successfully", networkDataHelper);
-            _sendMom.SendMessageToMom("se registro un nuevo usuario");
+            SendMom.SendMessageToMom("se registro un nuevo usuario");
         }
         else
         {
