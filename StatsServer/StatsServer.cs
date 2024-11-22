@@ -1,59 +1,69 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Hosting;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using StatsServer.DataAccess;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace StatsServer
 {
-    public class StatsServer
+    public class StatsServer : IHostedService
     {
         private readonly IConnection _connection;
         private readonly IModel _channel;
+        private readonly StatsData _statsData;
 
-        class Program
+        public StatsServer ()
         {
-            static void Main(string[] args)
-            {
-                var statsServer = new StatsServer();
-                statsServer.RecieveMomMessage();
-            }
+            _statsData = new StatsData();
+            var factory = new ConnectionFactory() { HostName = "localhost" };
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            RecieveMomMessage();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _channel.Close();
+            _connection.Close();
+            return Task.CompletedTask;
         }
 
         private void RecieveMomMessage()
         {
-            // 1 - Defino la conexion
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
+            _channel.QueueDeclare(queue: "the_first",
+                durable: false,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
+            var consumer = new EventingBasicConsumer(_channel);
+
+            consumer.Received += (sender, eventArgs) =>
             {
-                // En el canal defino la cola
-                channel.QueueDeclare(queue: "the_first",
-                    durable: false,
-                    exclusive: false,
-                    autoDelete: false,
-                    arguments: null);
+                var body = eventArgs.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                Console.WriteLine("Message received => {0}", message);
 
-                // Tengo que definir un consumer
-                // Defino el mecanismo de consumo
-                var consumer = new EventingBasicConsumer(channel);
-
-                consumer.Received += (sender, eventArgs) =>
+                if (message.Contains("New User"))
                 {
-                    var body = eventArgs.Body.ToArray();
+                    _statsData.IncrementTotalUsers();
+                    Console.WriteLine("Total users incremented. Current total: {0}", _statsData.GetTotalUsers());
+                }
+            };
 
-                    var message = Encoding.UTF8.GetString(body);
-                    Console.WriteLine(" Message received => {0}", message);
+            _channel.BasicConsume(queue: "the_first",
+                autoAck: true,
+                consumer: consumer);
 
-                };
-
-                // "PRENDO" el consumo de mensajes
-                // El ack es la confirmacion para que la cola lo borre
-                channel.BasicConsume(queue: "the_first",
-                    autoAck: true,
-                    consumer: consumer);
-
-                Console.WriteLine(" Press [enter] to exit.");
-                Console.ReadLine();
-            }
+            Console.WriteLine("Press [enter] to exit.");
+            Console.ReadLine();
         }
     }
 }

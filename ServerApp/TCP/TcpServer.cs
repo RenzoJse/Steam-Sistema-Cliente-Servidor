@@ -188,7 +188,7 @@ public class TcpServer
         {
             Console.WriteLine("Database.RegisterNewUser - New User: " + username + " Registered");
             await SuccesfulResponse("User registered successfully", networkDataHelper);
-            SendMom.SendMessageToMom("se registro un nuevo usuario");
+            SendMom.SendMessageToMom("New User Registered");
         }
         else
         {
