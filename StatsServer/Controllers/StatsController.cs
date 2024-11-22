@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ServerApp.DataAccess;
 using StatsServer.DataAccess;
 
 namespace StatsServer.Controllers
@@ -13,6 +14,7 @@ namespace StatsServer.Controllers
         {
             _statsData = statsData;
         }
+
 
         [HttpGet("users")]
         public IActionResult GetAllUsers()
@@ -32,6 +34,13 @@ namespace StatsServer.Controllers
             {
                 return StatusCode(500, "Internal Server Error: " + ex.Message);
             }
+        }
+
+        [HttpGet("hello")]
+        public IActionResult GetHello()
+        {
+            var totalUsers = _statsData.GetTotalUsers();
+            return Ok(totalUsers);
         }
     }
 }
