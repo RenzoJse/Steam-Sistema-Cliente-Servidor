@@ -10,11 +10,12 @@ namespace StatsServer
 {
     public class StatsServer
     {
-        public StatsServer()
+        private readonly StatsData _statsData;
+        public StatsServer(StatsData statsData)
         {
+            _statsData = statsData;
             string rabbitMqHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
             var factory = new ConnectionFactory() { HostName =  rabbitMqHost }; // Defino la conexion
-            var statsData = new StatsData();
 
             var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
@@ -35,8 +36,8 @@ namespace StatsServer
                 Console.WriteLine(" [x] Received {0}", message);
                 if (message.Contains("New User"))
                 {
-                    statsData.IncrementTotalUsers();
-                    Console.WriteLine("Total users incremented. Current total: {0}", statsData.GetTotalUsers());
+                    _statsData.IncrementTotalUsers();
+                    Console.WriteLine("Total users incremented. Current total: {0}", _statsData.GetTotalUsers());
                 }
             };
 

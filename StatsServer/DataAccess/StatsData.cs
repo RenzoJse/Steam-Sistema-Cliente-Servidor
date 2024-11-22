@@ -4,17 +4,15 @@ public class StatsData
 {
     private static StatsData _instance;
     private int _totalUsers;
-    private static object _lock = new object();
+    private static readonly object _lock = new();
 
-    public static StatsData? GetInstance()
+    public static StatsData GetInstance()
     {
         lock (_lock)
         {
-            if (_instance == null)
-            {
-                _instance = new StatsData();
-            }
+            if (_instance == null) _instance = new StatsData();
         }
+
         return _instance;
     }
 
@@ -25,11 +23,17 @@ public class StatsData
 
     public void IncrementTotalUsers()
     {
-        _totalUsers++;
+        lock (_lock)
+        {
+            _totalUsers++;
+        }
     }
 
     public int GetTotalUsers()
     {
-        return _totalUsers;
+        lock (_lock)
+        {
+            return _totalUsers;
+        }
     }
 }

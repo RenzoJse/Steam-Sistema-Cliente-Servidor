@@ -16,6 +16,7 @@ namespace StatsServer
             services.AddControllers();
             services.AddSwaggerGen();
             services.AddSingleton<StatsData>();
+            services.AddSingleton<StatsServer>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
