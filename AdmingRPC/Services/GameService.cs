@@ -14,7 +14,15 @@ public class GameManagementService : GameManagement.GameManagementBase
         _logger = logger;
     }
 
-    public override async Task AddGameInteractive(
+    public override Task AddGameInteractive(
+        IAsyncStreamReader<GameData> requestStream,
+        IServerStreamWriter<ServerResponse> responseStream,
+        ServerCallContext context)
+    {
+        return AddGameInteractiveInternal(requestStream, responseStream, context);
+    }
+
+    private async Task AddGameInteractiveInternal(
         IAsyncStreamReader<GameData> requestStream,
         IServerStreamWriter<ServerResponse> responseStream,
         ServerCallContext context)
@@ -23,62 +31,77 @@ public class GameManagementService : GameManagement.GameManagementBase
 
         try
         {
-            // Recolectar datos enviados por el cliente
             while (await requestStream.MoveNext())
             {
                 var request = requestStream.Current;
 
-                if (!string.IsNullOrEmpty(request.Key) && !string.IsNullOrEmpty(request.Value))
+                if (string.IsNullOrEmpty(request.Key) || string.IsNullOrEmpty(request.Value))
                 {
-                    gameData[request.Key.ToLower()] = request.Value;
-
-                    // Enviar respuesta por cada dato recibido
-                    if (!context.CancellationToken.IsCancellationRequested)
-                    {
-                        await responseStream.WriteAsync(new ServerResponse
-                        {
-                            Message = $"{request.Key} received successfully."
-                        });
-                    }
+                    await SafeWriteAsync(responseStream, "Error: Both key and value must be provided.");
+                    return;
                 }
+
+                var key = request.Key.ToLower();
+                var value = request.Value;
+
+                switch (key)
+                {
+                    case "name":
+                        if (GameManager.DoesGameExist(value))
+                        {
+                            await SafeWriteAsync(responseStream, "Error: That game already exists.");
+                            return;
+                        }
+                        break;
+                    case "releasedate":
+                        if (!DateTime.TryParseExact(value, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
+                        {
+                            await SafeWriteAsync(responseStream, "Error: Invalid date format. Use dd/MM/yyyy.");
+                            return;
+                        }
+                        break;
+                    case "unitsavailable":
+                    case "price":
+                        if (!int.TryParse(value, out _))
+                        {
+                            await SafeWriteAsync(responseStream, $"Error: {key} must be a valid integer.");
+                            return;
+                        }
+                        break;
+                    case "username":
+                        if (UserManager.GetUserByUsername(value) == null)
+                        {
+                            await SafeWriteAsync(responseStream, "Error: User not found. Please verify that the user is registered.");
+                            return;
+                        }
+                        break;
+                }
+
+                gameData[key] = value;
+                await SafeWriteAsync(responseStream, $"{key} received successfully.");
             }
 
-            // Validar que todos los datos requeridos estén presentes
             if (gameData.TryGetValue("name", out var name) &&
                 gameData.TryGetValue("genre", out var genre) &&
-                gameData.TryGetValue("releasedate", out var releaseDate) &&
+                gameData.TryGetValue("releasedate", out var releaseDateStr) &&
                 gameData.TryGetValue("platform", out var platform) &&
                 gameData.TryGetValue("unitsavailable", out var unitsAvailableStr) &&
                 gameData.TryGetValue("price", out var priceStr) &&
                 gameData.TryGetValue("username", out var username) &&
-                DateTime.TryParseExact(releaseDate, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var releaseDateParsed) &&
+                DateTime.TryParseExact(releaseDateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var releaseDate) &&
                 int.TryParse(unitsAvailableStr, out var unitsAvailable) &&
                 int.TryParse(priceStr, out var price))
             {
-                // Validar si el usuario existe
                 var user = UserManager.GetUserByUsername(username);
-                if (user == null)
-                {
-                    await SafeWriteAsync(responseStream, "Error: User not found.");
-                    
-                }
-
-                // Validar si el juego ya existe
-                if (GameManager.DoesGameExist(name))
-                {
-                    await SafeWriteAsync(responseStream, "Error: That game already exists.");
-                    return;
-                }
-
-                // Crear y publicar el juego
-                var newGame = GameManager.CreateNewGame(name, genre, releaseDateParsed, platform, unitsAvailable, price, 0, user);
+                var newGame = GameManager.CreateNewGame(name, genre, releaseDate, platform, unitsAvailable, price, 0, user);
                 UserManager.PublishGame(newGame, user);
 
-                await SafeWriteAsync(responseStream, $"Game '{name}' added and published successfully by '{username}'.");
+                await SafeWriteAsync(responseStream, $"Game '{name}' added and published successfully.");
+                _logger.LogInformation($"Game '{name}' was successfully added and published.");
             }
             else
             {
-                await SafeWriteAsync(responseStream, "Error: Invalid game data. Please ensure all fields are valid.");
+                await SafeWriteAsync(responseStream, "Error: Missing or invalid game data.");
             }
         }
         catch (Exception ex)
@@ -88,7 +111,6 @@ public class GameManagementService : GameManagement.GameManagementBase
         }
     }
 
-    // Método auxiliar para escribir en el flujo de respuesta de manera segura
     private static async Task SafeWriteAsync(IServerStreamWriter<ServerResponse> responseStream, string message)
     {
         try
@@ -101,11 +123,15 @@ public class GameManagementService : GameManagement.GameManagementBase
         }
     }
 
-    public override async Task<RemoveGameResponse> RemoveGame(RemoveGameRequest request, ServerCallContext context)
+    public override Task<RemoveGameResponse> RemoveGame(RemoveGameRequest request, ServerCallContext context)
+    {
+        return Task.FromResult(RemoveGameInternal(request));
+    }
+
+    private RemoveGameResponse RemoveGameInternal(RemoveGameRequest request)
     {
         try
         {
-            // Intentar remover el juego
             var gameName = request.GameName;
 
             if (GameManager.DoesGameExist(gameName))
@@ -134,10 +160,31 @@ public class GameManagementService : GameManagement.GameManagementBase
         }
     }
 
-    public override async Task<ModifyGameResponse> ModifyGame(ModifyGameRequest request, ServerCallContext context)
+    public override Task<ModifyGameResponse> ModifyGame(ModifyGameRequest request, ServerCallContext context)
+    {
+        return Task.FromResult(ModifyGameInternal(request));
+    }
+
+    private ModifyGameResponse ModifyGameInternal(ModifyGameRequest request)
     {
         try
         {
+            if (request.Field.ToLower() == "check")
+            {
+                var gameExists = GameManager.DoesGameExist(request.GameName);
+                if (!gameExists)
+                {
+                    return new ModifyGameResponse
+                    {
+                        Message = $"Error: Game '{request.GameName}' not found."
+                    };
+                }
+                return new ModifyGameResponse
+                {
+                    Message = $"Game '{request.GameName}' exists."
+                };
+            }
+
             var game = GameManager.GetGameByName(request.GameName);
             if (game == null)
             {
@@ -207,4 +254,56 @@ public class GameManagementService : GameManagement.GameManagementBase
         }
     }
 
+    public override Task<GetGameReviewsResponse> GetGameReviews(GetGameReviewsRequest request, ServerCallContext context)
+    {
+        return Task.FromResult(GetGameReviewsInternal(request));
+    }
+
+    private GetGameReviewsResponse GetGameReviewsInternal(GetGameReviewsRequest request)
+    {
+        try
+        {
+            var game = GameManager.GetGameByName(request.GameName);
+
+            if (game == null)
+            {
+                return new GetGameReviewsResponse
+                {
+                    Message = $"Error: Game '{request.GameName}' not found."
+                };
+            }
+
+            if (game.Reviews.Count == 0)
+            {
+                return new GetGameReviewsResponse
+                {
+                    Message = $"No reviews found for the game '{request.GameName}'."
+                };
+            }
+
+            var response = new GetGameReviewsResponse
+            {
+                Message = $"Reviews for the game '{request.GameName}':"
+            };
+
+            foreach (var review in game.Reviews)
+            {
+                response.Reviews.Add(new GameReview
+                {
+                    Valoration = review.Valoration,
+                    Description = review.Description
+                });
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during GetGameReviews.");
+            return new GetGameReviewsResponse
+            {
+                Message = $"Error: {ex.Message}"
+            };
+        }
+    }
 }

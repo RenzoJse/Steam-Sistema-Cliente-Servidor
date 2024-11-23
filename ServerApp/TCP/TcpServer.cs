@@ -230,9 +230,11 @@ public class TcpServer
         var game = GameManager.GetGameByName(gameName);
         if (game != null)
         {
+            // Send game details to client
             var response = game.ToString();
             await SuccesfulResponse(response, networkDataHelper);
 
+            // Check if the image exists
             Console.WriteLine("Checking if image file exists...");
             var abspath = Path.Combine(Directory.GetCurrentDirectory(), "Images", game.Name + ".jpg");
 
@@ -246,29 +248,43 @@ public class TcpServer
             else
             {
                 Console.WriteLine("Image file not found, skipping file send.");
-                await SuccesfulResponse("No image available", networkDataHelper); // Envía el mensaje al cliente
+                await SuccesfulResponse("No image available", networkDataHelper); // Send message to client
             }
 
+            // Handle the request to display reviews
             var option = await ReceiveStringData(networkDataHelper);
             switch (option)
             {
                 case "yes":
-                    var reviews = new StringBuilder("Reviews:\n");
-                    foreach (var review in game.Reviews)
-                        reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
-                    await SuccesfulResponse(reviews.ToString(), networkDataHelper);
+                    if (game.Reviews.Count > 0)
+                    {
+                        var reviews = new StringBuilder("Reviews:\n");
+                        foreach (var review in game.Reviews)
+                        {
+                            reviews.Append("\n- " + review.Description + " - Valoration: " + review.Valoration);
+                        }
+                        await SuccesfulResponse(reviews.ToString(), networkDataHelper);
+                    }
+                    else
+                    {
+                        await SuccesfulResponse("No reviews available for this game.", networkDataHelper);
+                    }
                     break;
 
                 case "no":
                     await SuccesfulResponse("Enjoy your game info!", networkDataHelper);
                     break;
             }
+
+            // Notify client that operation is complete
+            await SuccesfulResponse("End of game info session.", networkDataHelper);
         }
         else
         {
             throw new InvalidOperationException("Game not found.");
         }
     }
+
     public async Task PublishGamegRCP(NetworkDataHelper networkDataHelper, User connectedUser, TcpClient client)
     {
         Console.WriteLine("Database.PublishGame - hola");
