@@ -12,7 +12,7 @@ public class Program
 {
     private static readonly SettingsManager SettingsMngr = new();
 
-    public static Task IniciarServerTcp()
+    public static Task StartTcpServer()
     {
         Console.WriteLine("Starting Server Application...");
 
