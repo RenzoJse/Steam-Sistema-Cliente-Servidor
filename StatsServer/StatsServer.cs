@@ -78,7 +78,7 @@ namespace StatsServer
         {
             var gameName = message.Split(new[] { "Buy Game: " }, StringSplitOptions.None)[1].Trim();
             var game = _gameRepository.GetGameByName(gameName);
-            _gameRepository.DiscountPurchasedGame(game);
+            await _gameRepository.DiscountPurchasedGame(await game);
         }
 
         private async Task AddNewGame(string message)
@@ -99,7 +99,7 @@ namespace StatsServer
                 Publisher = parts[7]
             };
 
-            _gameRepository.AddGame(game);
+            await _gameRepository.AddGame(game);
             Console.WriteLine("New game added: " + game.Name);
         }
     }

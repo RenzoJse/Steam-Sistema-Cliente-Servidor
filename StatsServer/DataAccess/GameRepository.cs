@@ -28,7 +28,7 @@ public class GameRepository
         _purchasedGames = [];
     }
 
-    public void AddGame(Game game)
+    public async Task AddGame(Game game)
     {
         if (game == null) throw new ArgumentNullException(nameof(game));
 
@@ -38,22 +38,22 @@ public class GameRepository
         }
     }
 
-    public Game GetGameByName(string name)
+    public Task<Game> GetGameByName(string name)
     {
-        return _games.FirstOrDefault(g => g.Name == name)!;
+        return Task.FromResult(_games.FirstOrDefault(g => g.Name == name)!);
     }
 
 
-    public void RemoveGame(string name)
+    public async Task RemoveGame(string name)
     {
         lock (_lock)
         {
-            var game = GetGameByName(name);
+            var game = GetGameByName(name).Result;
             if (game != null!) _games.Remove(game);
         }
     }
 
-    public void DiscountPurchasedGame(Game game)
+    public async Task DiscountPurchasedGame(Game game)
     {
         lock (_lock)
         {
@@ -75,21 +75,21 @@ public class GameRepository
         }
     }
 
-    public void AddValoration(string name, int valoration)
+    public async Task AddValoration(string name, int valoration)
     {
         lock (_lock)
         {
             var game = GetGameByName(name);
-            if (game != null!) game.Valoration = (game.Valoration + valoration) / 2;
+            if (game != null!) game.Result.Valoration = (game.Result.Valoration + valoration) / 2;
         }
     }
 
-    public void AddReview(string name, Review review)
+    public async Task AddReview(string name, Review review)
     {
         lock (_lock)
         {
             var game = GetGameByName(name);
-            game?.Reviews.Add(review);
+            game?.Result.Reviews.Add(review);
         }
     }
 
