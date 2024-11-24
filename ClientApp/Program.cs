@@ -421,24 +421,29 @@ internal static class Program
         string gameName = Console.ReadLine()!;
         await SendMessage(gameName!);
         string response = await ReceiveMessage();
-        if (!response.Contains("Error"))
-        {
-            Console.Write("Write an opinion about the game: ");
-            string reviewText = Console.ReadLine()!;
-            await SendMessage(reviewText);
-            Console.Write("How Would You Rate It? (0-10): ");
-            string valoration = Console.ReadLine()!;
-            while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
-            {
-                Console.Write("Invalid valoration. Please enter a number between 1 and 10: ");
-                valoration = Console.ReadLine()!;
-            }
 
-            await SendMessage(valoration);
+        if (response.Contains("Error"))
+        {
+            Console.WriteLine(response);
+            return; // Termina si hay error
         }
 
-        Console.WriteLine(ReceiveMessage());
+        Console.Write("Write an opinion about the game: ");
+        string reviewText = Console.ReadLine()!;
+        await SendMessage(reviewText);
+
+        Console.Write("How Would You Rate It? (1-10): ");
+        string valoration = Console.ReadLine()!;
+        while (!int.TryParse(valoration, out int val) || val < 1 || val > 10)
+        {
+            Console.Write("Invalid valoration. Please enter a number between 1 and 10: ");
+            valoration = Console.ReadLine()!;
+        }
+
+        await SendMessage(valoration);
+        Console.WriteLine(await ReceiveMessage()); // Esperar respuesta final
     }
+
 
     private static async Task MoreInfoGame(TcpClient socketClient)
     {
@@ -450,7 +455,6 @@ internal static class Program
 
         var fileCommonHandler = new FileCommsHandler(socketClient);
 
-        // Recibe el mensaje del servidor sobre la disponibilidad de la imagen
         string response = await ReceiveMessage();
 
         if (response == "No image available")
@@ -462,7 +466,7 @@ internal static class Program
             Console.WriteLine("Image incoming...");
             try
             {
-                await fileCommonHandler.ReceiveFile(gameName); // Recibe el archivo de manera asíncrona
+                await fileCommonHandler.ReceiveFile(gameName);
                 Console.WriteLine("Image received successfully!\n");
             }
             catch (Exception ex)
@@ -475,16 +479,23 @@ internal static class Program
         string readReviews = Console.ReadLine()!;
         if ("yes".Equals(readReviews, StringComparison.OrdinalIgnoreCase))
         {
-            await SendAndReceiveMessage(readReviews); // Enviar y recibir la confirmación para leer reseñas
-            string reviews = await ReceiveMessage();   // Recibe las reseñas del servidor
-            Console.WriteLine(reviews);
+            await SendMessage(readReviews);
+            string reviews = await ReceiveMessage();
+            //Console.WriteLine(reviews);
+        }
+        else
+        {
+            await SendMessage("no");
         }
 
-        Console.WriteLine("\n");
+        // Wait for the completion message from the server
+        string completionMessage = await ReceiveMessage();
+        //Console.WriteLine(completionMessage);
 
-        // Muestra el menú de opciones después de terminar
-        LoggedInMenu();
+        // Return to the main menu
+       // LoggedInMenu();
     }
+
 
 
     private static async Task BuyGame()

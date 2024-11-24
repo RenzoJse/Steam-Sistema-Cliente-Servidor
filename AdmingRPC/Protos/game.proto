@@ -9,6 +9,7 @@ service GameManagement {
   rpc AddGameInteractive (stream GameData) returns (stream ServerResponse);
   rpc RemoveGame (RemoveGameRequest) returns (RemoveGameResponse);
   rpc ModifyGame (ModifyGameRequest) returns (ModifyGameResponse); // Nueva RPC para modificar juegos
+  rpc GetGameReviews (GetGameReviewsRequest) returns (GetGameReviewsResponse); // Nueva RPC para obtener reseñas de un juego
 }
 
 message GameRequest {
@@ -42,7 +43,7 @@ message RemoveGameResponse {
   string message = 1;
 }
 
-message ModifyGameRequest { // Nuevo mensaje para modificar juegos
+message ModifyGameRequest { // Mensaje para modificar juegos
   string gameName = 1; // Nombre del juego a modificar
   string field = 2;    // Campo a modificar
   string newValue = 3; // Nuevo valor del campo
@@ -50,4 +51,18 @@ message ModifyGameRequest { // Nuevo mensaje para modificar juegos
 
 message ModifyGameResponse { // Respuesta de modificar juegos
   string message = 1;
+}
+
+message GetGameReviewsRequest { // Mensaje para solicitar reseñas de un juego
+  string gameName = 1; // Nombre del juego
+}
+
+message GetGameReviewsResponse { // Respuesta con las reseñas del juego
+  string message = 1; // Mensaje del servidor
+  repeated GameReview reviews = 2; // Lista de reseñas
+}
+
+message GameReview { // Estructura de una reseña
+  int32 valoration = 1; // Valoración del juego
+  string description = 2; // Descripción de la reseña
 }
