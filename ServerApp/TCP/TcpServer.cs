@@ -397,6 +397,7 @@ public class TcpServer
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{gameName}.jpg");
                 if (File.Exists(imagePath)) File.Delete(imagePath);
 
+                SendMom.SendMessageToMom("Deleted: " + gameName);
                 await SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
             }
             else

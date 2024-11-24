@@ -55,12 +55,23 @@ namespace StatsServer
                     ModifyGameUnits(message);
                 }
 
+                if (message.Contains("Deleted"))
+                {
+                    DeleteGame(message);
+                }
+
             };
 
             //"PRENDO" el consumo de mensajes
             channel.BasicConsume(queue: "steam_logs",
                 autoAck: true,
                 consumer: consumer);
+        }
+
+        private void DeleteGame(string message)
+        {
+            var gameName = message.Split(["Deleted: "], StringSplitOptions.None)[1].Trim();
+            _gameRepository.RemoveGame(gameName);
         }
 
         private void ModifyGameUnits(string message)
