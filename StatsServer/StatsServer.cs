@@ -47,17 +47,17 @@ namespace StatsServer
 
                 if (message.Contains("New Game"))
                 {
-                    AddNewGame(message);
+                    _ = AddNewGame(message);
                 }
 
                 if (message.Contains("Buy Game"))
                 {
-                    ModifyGameUnits(message);
+                    _ = ModifyGameUnits(message);
                 }
 
                 if (message.Contains("Deleted"))
                 {
-                    DeleteGame(message);
+                    _ = DeleteGame(message);
                 }
 
             };
@@ -68,24 +68,24 @@ namespace StatsServer
                 consumer: consumer);
         }
 
-        private void DeleteGame(string message)
+        private async Task DeleteGame(string message)
         {
-            var gameName = message.Split(["Deleted: "], StringSplitOptions.None)[1].Trim();
+            var gameName = message.Split(new[] { "Deleted: " }, StringSplitOptions.None)[1].Trim();
             _gameRepository.RemoveGame(gameName);
         }
 
-        private void ModifyGameUnits(string message)
+        private async Task ModifyGameUnits(string message)
         {
-            var gameName = message.Split(["Buy Game: "], StringSplitOptions.None)[1].Trim();
+            var gameName = message.Split(new[] { "Buy Game: " }, StringSplitOptions.None)[1].Trim();
             var game = _gameRepository.GetGameByName(gameName);
             _gameRepository.DiscountPurchasedGame(game);
         }
 
-        private void AddNewGame(string message)
+        private async Task AddNewGame(string message)
         {
             Console.WriteLine(message);
 
-            var parts = message.Split(["New Game Published: "], StringSplitOptions.None)[1].Split('-');
+            var parts = message.Split(new[] { "New Game Published: " }, StringSplitOptions.None)[1].Split('-');
 
             var game = new Game
             {

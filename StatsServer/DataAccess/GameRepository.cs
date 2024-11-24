@@ -8,6 +8,8 @@ public class GameRepository
 {
     private static GameRepository _instance;
     private readonly List<Game> _games;
+    private readonly List<Game> _purchasedGames;
+    private static bool _reportGeneratedStatus;
     private static readonly object _lock = new();
 
     public static GameRepository GetInstance()
@@ -23,6 +25,7 @@ public class GameRepository
     public GameRepository()
     {
         _games = PreLoadedGames();
+        _purchasedGames = [];
     }
 
     public void AddGame(Game game)
@@ -56,7 +59,11 @@ public class GameRepository
         {
             var gamePurchased = _games.FirstOrDefault(g => g.Name == game.Name);
 
-            if (gamePurchased != null) gamePurchased.UnitsAvailable--;
+            if (gamePurchased != null)
+            {
+                gamePurchased.UnitsAvailable--;
+                _purchasedGames.Add(game);
+            }
         }
     }
 
@@ -86,7 +93,7 @@ public class GameRepository
         }
     }
 
-    public Game[] GetFilteredGames(FilterGame filter)
+    public async Task<Game[]> GetFilteredGames(FilterGame filter)
     {
         lock (_lock)
         {
@@ -104,6 +111,57 @@ public class GameRepository
 
             return query.ToArray();
         }
+    }
+
+    public async Task<Dictionary<string, int>> GetSalesReport()
+    {
+        try
+        {
+            if (_reportGeneratedStatus == false)
+            {
+                throw new InvalidOperationException("Sales report has not been generated yet.");
+            }
+            else
+            {
+                return await GenerateSellsReport(_purchasedGames);
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine(ex.Message);
+            return new Dictionary<string, int>();
+        }
+    }
+
+    public static Task<bool> GetSalesReportStatus()
+    {
+        return Task.FromResult(_reportGeneratedStatus);
+    }
+
+    public async void PostSellsReport()
+    {
+        _reportGeneratedStatus = false;
+        await GenerateSellsReport(_purchasedGames);
+    }
+
+    public static async Task<Dictionary<string, int>> GenerateSellsReport(List<Game>
+        games)
+    {
+        Dictionary<string, int> sellsFromPublisher = new Dictionary<string, int>();
+        foreach (var game in games)
+        {
+            await Task.Delay(5000);
+            if (sellsFromPublisher.ContainsKey(game.Publisher))
+            {
+                sellsFromPublisher[game.Publisher] ++;
+            }
+            else
+            {
+                sellsFromPublisher[game.Publisher] = 1;
+            }
+        }
+        _reportGeneratedStatus = true;
+        return sellsFromPublisher;
     }
 
     private List<Game> PreLoadedGames()

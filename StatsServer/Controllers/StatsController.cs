@@ -44,7 +44,7 @@ namespace StatsServer.Controllers
         {
             try
             {
-                var filteredGames =  _gameRepository.GetFilteredGames(criteria);
+                var filteredGames =  _gameRepository.GetFilteredGames(criteria).Result;
 
                 if (filteredGames.Length == 0)
                 {
@@ -52,6 +52,61 @@ namespace StatsServer.Controllers
                 }
 
                 return Task.FromResult<IActionResult>(Ok(filteredGames));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<IActionResult>(StatusCode(500, "Internal Server Error: " + ex.Message));
+            }
+        }
+
+        [HttpGet("reports")]
+        public Task<IActionResult> GetSalesReport()
+        {
+            try
+            {
+                var salesReport = _gameRepository.GetSalesReport().Result;
+
+                if (salesReport == null)
+                {
+                    return Task.FromResult<IActionResult>(NotFound("No sales report available."));
+                }
+
+                return Task.FromResult<IActionResult>(Ok(salesReport));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<IActionResult>(StatusCode(500, "Internal Server Error: " + ex.Message));
+            }
+        }
+
+        [HttpPost("reports")]
+        public Task<IActionResult> GenerateReport()
+        {
+            try
+            {
+                _gameRepository.PostSellsReport();
+
+                return Task.FromResult<IActionResult>(Ok("Report is being generated."));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<IActionResult>(StatusCode(500, "Internal Server Error: " + ex.Message));
+            }
+        }
+
+        [HttpGet("reports/status")]
+        public Task<IActionResult> GetSalesReportStatus()
+        {
+            try
+            {
+                var salesReport = GameRepository.GetSalesReportStatus().Result;
+
+                if (salesReport == false)
+                {
+                    return Task.FromResult<IActionResult>(Ok("The report isnt ready."));
+                }
+
+                return Task.FromResult<IActionResult>(Ok("The report is ready."));
             }
             catch (Exception ex)
             {
