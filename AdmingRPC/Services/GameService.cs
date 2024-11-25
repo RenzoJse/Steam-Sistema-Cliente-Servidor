@@ -4,6 +4,7 @@ using Grpc.Core;
 using ServerApp.Dominio;
 using System;
 using System.Collections.Generic;
+using ServerApp.MomMessage;
 
 public class GameManagementService : GameManagement.GameManagementBase
 {
@@ -197,35 +198,53 @@ public class GameManagementService : GameManagement.GameManagementBase
             switch (request.Field.ToLower())
             {
                 case "name":
+                    SendMom.SendMessageToMom("Modify-Name-" + request.NewValue + "-" + game.Name);
                     game.Name = request.NewValue;
                     break;
                 case "genre":
+                    SendMom.SendMessageToMom("Modify-Genre-" + request.NewValue + "-" + game.Name);
                     game.Genre = request.NewValue;
                     break;
                 case "release date":
                     if (DateTime.TryParse(request.NewValue, out var newReleaseDate))
+                    {
+                        SendMom.SendMessageToMom("Modify-ReleaseDate-" + newReleaseDate + "-" + game.Name);
                         game.ReleaseDate = newReleaseDate;
+                    }
                     else
+                    {
                         return new ModifyGameResponse
                         {
                             Message = "Error: Invalid date format."
                         };
+                    }
+
                     break;
                 case "platform":
+                    SendMom.SendMessageToMom("Modify-Platform-" + request.NewValue + "-" + game.Name);
                     game.Platform = request.NewValue;
                     break;
                 case "units available":
                     if (int.TryParse(request.NewValue, out var newUnitsAvailable))
+                    {
+                        SendMom.SendMessageToMom("Modify-Units-" + newUnitsAvailable + "-" + game.Name);
                         game.UnitsAvailable = newUnitsAvailable;
+                    }
                     else
+                    {
                         return new ModifyGameResponse
                         {
                             Message = "Error: Invalid number format for units available."
                         };
+                    }
+
                     break;
                 case "price":
                     if (int.TryParse(request.NewValue, out var newPrice))
+                    {
+                        SendMom.SendMessageToMom("Modify-Price-" + newPrice + "-" + game.Name);
                         game.Price = newPrice;
+                    }
                     else
                         return new ModifyGameResponse
                         {

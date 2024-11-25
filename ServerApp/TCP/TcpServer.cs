@@ -535,7 +535,7 @@ public class TcpServer
                 case "release date":
                     if (DateTime.TryParse(newValue, out var newReleaseDate))
                     {
-                        SendMom.SendMessageToMom("Modify-ReleaseDate-" + "-" + game.Name);
+                        SendMom.SendMessageToMom("Modify-ReleaseDate-" + newReleaseDate + "-" + game.Name);
                         game.ReleaseDate = newReleaseDate;
                     }else
                         throw new ArgumentException("Invalid date format.");

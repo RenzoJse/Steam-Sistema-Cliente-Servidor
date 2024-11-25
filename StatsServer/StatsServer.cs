@@ -174,7 +174,7 @@ namespace StatsServer
                         case "genre":
                             game.Genre = newValue;
                             break;
-                        case "release date":
+                        case "releasedate":
                             if (DateTime.TryParse(newValue, out var newReleaseDate))
                             {
                                 game.ReleaseDate = newReleaseDate;
@@ -188,10 +188,20 @@ namespace StatsServer
                         case "platform":
                             game.Platform = newValue;
                             break;
+                        case "price":
+                            if (int.TryParse(newValue, out var newPrice))
+                            {
+                                game.Price = newPrice;
+                            }
+                            else
+                            {
+                                throw new ArgumentException("Invalid number format.");
+                            }
+                            break;
                         case "publisher":
                             game.Publisher = newValue;
                             break;
-                        case "units available":
+                        case "units":
                             if (int.TryParse(newValue, out var newUnitsAvailable))
                             {
                                 game.UnitsAvailable = newUnitsAvailable;
