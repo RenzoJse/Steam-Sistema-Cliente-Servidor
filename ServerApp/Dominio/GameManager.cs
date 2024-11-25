@@ -81,18 +81,6 @@ namespace ServerApp.Dominio
             }
         }
 
-        public static void AddValoration(string name, int valoration)
-        {
-            lock (_lock)
-            {
-                var game = GetGameByName(name);
-                if (game != null)
-                {
-                    game.Valoration = (game.Valoration + valoration) / 2;
-                }
-            }
-        }
-
         public static void AddReview(string name, Review review)
         {
             lock (_lock)
@@ -100,6 +88,7 @@ namespace ServerApp.Dominio
                 var game = GetGameByName(name);
                 if (game != null)
                 {
+                    SendMom.SendMessageToMom("Review-Description-" + review.Description + "-" + review.Valoration + "-" + game.Name);
                     game.Reviews.Add(review);
                 }
             }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Comunicacion.Dominio;
 using ServerApp.DataAccess;
+using ServerApp.Dominio;
 
 namespace StatsServer
 {
@@ -85,12 +86,37 @@ namespace StatsServer
                     ModifyGame(message);
                 }
 
+                if (message.Contains("Review"))
+                {
+                    _ = ReviewGame(message);
+                }
+
             };
 
             //"PRENDO" el consumo de mensajes
             channel.BasicConsume(queue: "steam_logs",
                 autoAck: true,
                 consumer: consumer);
+        }
+
+        private async Task ReviewGame(string message)
+        {
+            var parts = message.Split(new[] { "Review-" }, StringSplitOptions.None)[1].Split('-');
+            var reviewType = parts[0].Trim();
+            var reviewDescription = parts[1].Trim();
+            int reviewValue = Convert.ToInt32(parts[2].Trim());
+            var gameName = parts[3].Trim();
+            var game = await _gameRepository.GetGameByName(gameName);
+
+            if (game != null)
+            {
+                await _gameRepository.AddReview(gameName, new Review { Description = reviewDescription, Valoration = reviewValue });
+                Console.WriteLine($"Game {gameName} reviewed: {reviewType} updated to {reviewValue}");
+            }
+            else
+            {
+                Console.WriteLine($"Game {gameName} not found.");
+            }
         }
 
         private async Task DeleteGame(string message)

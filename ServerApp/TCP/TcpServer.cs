@@ -612,7 +612,6 @@ public class TcpServer
         var valoration = await ReceiveStringData(networkDataHelper);
         var review = new Review { Valoration = int.Parse(valoration), Description = reviewText };
         GameManager.AddReview(gameName, review);
-        GameManager.AddValoration(gameName, int.Parse(valoration));
         await SuccesfulResponse("Thanks For Your Collaboration!", networkDataHelper);
     }
 
