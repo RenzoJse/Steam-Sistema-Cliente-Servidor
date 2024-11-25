@@ -10,6 +10,7 @@ service GameManagement {
   rpc RemoveGame (RemoveGameRequest) returns (RemoveGameResponse);
   rpc ModifyGame (ModifyGameRequest) returns (ModifyGameResponse);
   rpc GetGameReviews (GetGameReviewsRequest) returns (GetGameReviewsResponse);
+  rpc SubscribeToNextPurchasesQueue (ServerResponse) returns (stream PurchasedGame);
 }
 
 message GameRequest {
@@ -65,4 +66,9 @@ message GetGameReviewsResponse {
 message GameReview {
   int32 valoration = 1;
   string description = 2;
+}
+
+message PurchasedGame {
+  string name = 1;
+  string genre = 2;
 }
