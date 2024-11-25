@@ -13,7 +13,7 @@ public class SendMom
         // 1 - Definimos un FACTORY para inicializar la conexion
         // Esto es exclusivo de Rabbit, le indicamos donde esta el servidor de Rabbit
 
-        var factory = new ConnectionFactory { HostName = "localhost" };
+        var factory = new ConnectionFactory { Uri = new Uri("amqp://host.docker.internal:5672") };
 
         // 2 - Creamos la connection y la conectamos al hostname indicado (en este caso es localhost)
         using (var connection = factory.CreateConnection())
@@ -53,7 +53,7 @@ public class SendMom
 
     public void SuscribeToMom(int n)
     {
-        var factory = new ConnectionFactory() { HostName = "localhost" };
+        var factory = new ConnectionFactory() { Uri = new Uri("amqp://host.docker.internal:5672") };
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
