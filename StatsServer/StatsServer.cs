@@ -33,7 +33,7 @@ namespace StatsServer
                 autoDelete: false,
                 arguments: null);
 
-            channel.QueueDeclare(queue: "steam_logs", // en el canal, definimos la Queue de la conexion
+            channel.QueueDeclare(queue: "steam_logs",
                 durable: false,
                 exclusive: false,
                 autoDelete: false,
@@ -128,7 +128,7 @@ namespace StatsServer
 
         private void PublishNextPurchase(Game game)
         {
-            var message = $"Next Purchase: {game.Name} ({game.Genre})";
+            var message = $"New Game Purchased: {game.Name} ({game.Genre})";
             var body = Encoding.UTF8.GetBytes(message);
 
             _publishChannel.BasicPublish(exchange: "",
@@ -136,7 +136,7 @@ namespace StatsServer
                 basicProperties: null,
                 body: body);
 
-            Console.WriteLine(" [x] Next Purchase Published: {0}", message);
+            Console.WriteLine(" [x] New Game Purchased: {0}", message);
         }
     }
 }

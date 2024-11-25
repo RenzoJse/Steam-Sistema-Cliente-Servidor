@@ -8,7 +8,7 @@ public class SendMom
 {
     public void SendMessageToMom(string sendMessage)
     {
-        Console.WriteLine("Enviando mensaje a mama");
+        Console.WriteLine("Sending message to MOM");
 
         // 1 - Definimos un FACTORY para inicializar la conexion
         // Esto es exclusivo de Rabbit, le indicamos donde esta el servidor de Rabbit
