@@ -1,4 +1,5 @@
 ﻿using Comunicacion.Dominio;
+using ServerApp.MomMessage;
 
 namespace ServerApp.Dominio
 {
@@ -6,7 +7,7 @@ namespace ServerApp.Dominio
     {
         private static List<Game> _games = [];
         private static object _lock = new object();
-
+        private static readonly SendMom SendMom = new SendMom();
         public GameManager()
         {
             PreLoadedGames();
@@ -27,10 +28,11 @@ namespace ServerApp.Dominio
                     UnitsAvailable = unitsAvailable,
                     Price = price,
                     Valoration = valoration,
-                    Reviews = new List<Review>(),
+                    Reviews = [],
                     ImageName = name
                 };
                 _games.Add(newGame);
+                SendMom.SendMessageToMom("New Game Published: " + name + "-" + genre + "-" + releaseDate + "-" + platform + "-" + unitsAvailable + "-" + price + "-" +valoration + "-" + owner.Username);
                 return newGame;
             }
         }

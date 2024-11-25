@@ -6,7 +6,7 @@ namespace ServerApp.MomMessage;
 
 public class SendMom
 {
-    public void SendMessageToMom(string sendMessage)
+    public static void SendMessageToMom(string sendMessage)
     {
         Console.WriteLine("Sending message to MOM");
 
