@@ -1,0 +1,18 @@
+﻿services:
+  webapi:
+    build: ./StatsServer
+    container_name: Stats-Server
+    ports:
+      - "8080:8080" # (Puerto de la máquina host):(puerto del contenedor)
+    depends_on:
+      - rabbitmq
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RABBITMQ_HOST=rabbitmq
+
+  rabbitmq:
+    image: "rabbitmq:4.0.3-management" # Version 4.0.3 de RabbitMQ con el plugin administrativo
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"

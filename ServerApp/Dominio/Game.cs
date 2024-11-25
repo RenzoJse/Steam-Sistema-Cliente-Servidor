@@ -1,4 +1,6 @@
-﻿namespace Comunicacion.Dominio;
+﻿using ServerApp.Dominio;
+
+namespace Comunicacion.Dominio;
 
 public class Game
 {

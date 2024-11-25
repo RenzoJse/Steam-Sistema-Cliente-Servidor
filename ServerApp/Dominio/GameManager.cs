@@ -1,16 +1,19 @@
-﻿namespace Comunicacion.Dominio
+﻿using Comunicacion.Dominio;
+using ServerApp.MomMessage;
+
+namespace ServerApp.Dominio
 {
     public class GameManager
     {
-        private static List<Game> _games = new List<Game>();
+        private static List<Game> _games = [];
         private static object _lock = new object();
-
+        private static readonly SendMom SendMom = new SendMom();
         public GameManager()
         {
             PreLoadedGames();
         }
 
-        public Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
+        public static Game CreateNewGame(string name, string genre, DateTime releaseDate, string platform, int unitsAvailable,
             int price, int valoration, User owner)
         {
             lock(_lock)
@@ -25,15 +28,16 @@
                     UnitsAvailable = unitsAvailable,
                     Price = price,
                     Valoration = valoration,
-                    Reviews = new List<Review>(),
+                    Reviews = [],
                     ImageName = name
                 };
                 _games.Add(newGame);
+                SendMom.SendMessageToMom("New Game Published: " + name + "-" + genre + "-" + releaseDate + "-" + platform + "-" + unitsAvailable + "-" + price + "-" +valoration + "-" + owner.Username);
                 return newGame;
             }
         }
-        
-        public List<Game> GetAllGames()
+
+        public static List<Game> GetAllGames()
         {
             lock (_lock)
             {
@@ -46,27 +50,20 @@
             return _games.FirstOrDefault(g => g.Name == name);
         }
 
-        public void AddGame(Game game)
-        {
-            lock (_lock)
-            {
-                _games.Add(game);
-            }
-        }
-
-        public void RemoveGame(string name)
+        public static void RemoveGame(string name)
         {
             lock (_lock)
             {
                 var game = GetGameByName(name);
                 if (game != null)
                 {
+                    SendMom.SendMessageToMom("Deleted: " + name);
                     _games.Remove(game);
                 }
             }
         }
 
-        public void DiscountPurchasedGame(Game game)
+        public static void DiscountPurchasedGame(Game game)
         {
             lock (_lock)
             {
@@ -76,7 +73,7 @@
             }
         }
 
-        public bool DoesGameExist(string name)
+        public static bool DoesGameExist(string name)
         {
             lock (_lock)
             {
@@ -84,31 +81,20 @@
             }
         }
 
-        public void AddValoration(string name, int valoration)
+        public static void AddReview(string name, Review review)
         {
             lock (_lock)
             {
                 var game = GetGameByName(name);
                 if (game != null)
                 {
-                    game.Valoration = (game.Valoration + valoration) / 2;
-                }
-            }
-        }
-        
-        public void AddReview(string name, Review review)
-        {
-            lock (_lock)
-            {
-                var game = GetGameByName(name);
-                if (game != null)
-                {
+                    SendMom.SendMessageToMom("Review-Description-" + review.Description + "-" + review.Valoration + "-" + game.Name);
                     game.Reviews.Add(review);
                 }
             }
         }
 
-        public List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
+        public static List<Game> GetGamesByAttribute(string attributeName, string attributeValue)
         {
             lock (_lock)
             {

@@ -1,4 +1,5 @@
 ﻿using Comunicacion.Dominio;
+using ServerApp.Dominio;
 
 namespace ServerApp.DataAccess;
 
@@ -6,12 +7,12 @@ public class UserRepository
 {
     private List<User> _users;
     private static object _lock = new object();
-    
+
     public UserRepository()
     {
-        _users = new List<User>();
+        _users = [];
     }
-    
+
     public bool RegisterUser(string username, string password)
     {
         lock (_lock)
@@ -21,7 +22,7 @@ public class UserRepository
                 return false; // Username already exists
             }
 
-            _users.Add(new User { Username = username, Password = password, PurchasedGames = new List<Game>() });
+            _users.Add(new User { Username = username, Password = password, PurchasedGames = [] });
             return true;
         }
     }

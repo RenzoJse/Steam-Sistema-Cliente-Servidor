@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using Comunicacion.Dominio;
 
-namespace Comunicacion.Dominio
+namespace ServerApp.Dominio
 {
     public class UserManager
     {
-        private List<User> _users = new List<User>();
+        private static List<User> _users = [];
         private static object _lock = new object();
 
         public UserManager()
@@ -13,7 +12,7 @@ namespace Comunicacion.Dominio
             PreLoadedUsers();
         }
 
-        public bool RegisterUser(string username, string password)
+        public static bool RegisterUser(string username, string password)
         {
             lock (_lock)
             {
@@ -29,7 +28,16 @@ namespace Comunicacion.Dominio
             }
         }
 
-        public User AuthenticateUser(string username, string password)
+        public static User GetUserByUsername(string username)
+        {
+            lock (_lock)
+            {
+                return _users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+
+        public static User AuthenticateUser(string username, string password)
         {
             lock (_lock)
             {
@@ -43,7 +51,7 @@ namespace Comunicacion.Dominio
             }
         }
 
-        public bool PurchaseGame(Game game, User user)
+        public static bool PurchaseGame(Game game, User user)
         {
             lock (_lock)
             {
@@ -68,7 +76,7 @@ namespace Comunicacion.Dominio
             }
         }
 
-        public void PublishGame(Game game, User user)
+        public static void PublishGame(Game game, User user)
         {
             lock (_lock)
             {
@@ -94,8 +102,8 @@ namespace Comunicacion.Dominio
             {
                 Username = "admin",
                 Password = "admin",
-                PublishedGames = new List<Game>(),
-                PurchasedGames = new List<Game>()
+                PublishedGames = [],
+                PurchasedGames = []
             };
             _users.Add(admin);
 

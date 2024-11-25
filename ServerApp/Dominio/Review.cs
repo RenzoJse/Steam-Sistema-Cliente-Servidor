@@ -1,4 +1,4 @@
-﻿namespace Comunicacion.Dominio;
+﻿namespace ServerApp.Dominio;
 
 public class Review
 {
