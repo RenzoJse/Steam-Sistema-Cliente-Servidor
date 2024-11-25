@@ -8,8 +8,8 @@ service GameManagement {
   rpc AddGame (GameRequest) returns (GameResponse);
   rpc AddGameInteractive (stream GameData) returns (stream ServerResponse);
   rpc RemoveGame (RemoveGameRequest) returns (RemoveGameResponse);
-  rpc ModifyGame (ModifyGameRequest) returns (ModifyGameResponse); // Nueva RPC para modificar juegos
-  rpc GetGameReviews (GetGameReviewsRequest) returns (GetGameReviewsResponse); // Nueva RPC para obtener reseñas de un juego
+  rpc ModifyGame (ModifyGameRequest) returns (ModifyGameResponse);
+  rpc GetGameReviews (GetGameReviewsRequest) returns (GetGameReviewsResponse);
 }
 
 message GameRequest {
@@ -19,7 +19,7 @@ message GameRequest {
   string platform = 4;
   int32 units_available = 5;
   int32 price = 6;
-  string username = 7; // Campo existente para el usuario
+  string username = 7;
 }
 
 message GameResponse {
@@ -43,26 +43,26 @@ message RemoveGameResponse {
   string message = 1;
 }
 
-message ModifyGameRequest { // Mensaje para modificar juegos
-  string gameName = 1; // Nombre del juego a modificar
-  string field = 2;    // Campo a modificar
-  string newValue = 3; // Nuevo valor del campo
+message ModifyGameRequest {
+  string gameName = 1;
+  string field = 2;
+  string newValue = 3;
 }
 
-message ModifyGameResponse { // Respuesta de modificar juegos
+message ModifyGameResponse {
   string message = 1;
 }
 
-message GetGameReviewsRequest { // Mensaje para solicitar reseñas de un juego
-  string gameName = 1; // Nombre del juego
+message GetGameReviewsRequest {
+  string gameName = 1;
 }
 
-message GetGameReviewsResponse { // Respuesta con las reseñas del juego
-  string message = 1; // Mensaje del servidor
-  repeated GameReview reviews = 2; // Lista de reseñas
+message GetGameReviewsResponse {
+  string message = 1;
+  repeated GameReview reviews = 2;
 }
 
-message GameReview { // Estructura de una reseña
-  int32 valoration = 1; // Valoración del juego
-  string description = 2; // Descripción de la reseña
+message GameReview {
+  int32 valoration = 1;
+  string description = 2;
 }
