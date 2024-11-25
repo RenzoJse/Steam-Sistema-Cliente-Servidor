@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using StatsServer.DataAccess;
@@ -15,7 +16,8 @@ namespace StatsServer
         private readonly StatsData _statsData;
         private readonly GameRepository _gameRepository;
         private readonly IModel _publishChannel;
-        private int _nextPurchasesCount = 0;
+        private readonly ConcurrentDictionary<string, int> _subscribers = new ConcurrentDictionary<string, int>();
+
         public StatsServer(StatsData statsData, GameRepository gameRepository)
         {
             _statsData = statsData;
@@ -73,7 +75,8 @@ namespace StatsServer
                     var parts = message.Split(':');
                     if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out int count))
                     {
-                        _nextPurchasesCount = count;
+                        var clientId = Guid.NewGuid().ToString();
+                        _subscribers[clientId] = count;
                     }
                 }
 
@@ -97,10 +100,17 @@ namespace StatsServer
             var game = _gameRepository.GetGameByName(gameName);
             await _gameRepository.DiscountPurchasedGame(await game);
 
-            if (_nextPurchasesCount > 0)
+            foreach (var subscriber in _subscribers.Keys.ToList())
             {
-                PublishNextPurchase(await game);
-                _nextPurchasesCount--;
+                if (_subscribers[subscriber] > 0)
+                {
+                    PublishNextPurchase(await game, subscriber);
+                    _subscribers[subscriber]--;
+                    if (_subscribers[subscriber] == 0)
+                    {
+                        _subscribers.TryRemove(subscriber, out _);
+                    }
+                }
             }
         }
 
@@ -126,7 +136,7 @@ namespace StatsServer
             Console.WriteLine("New game added: " + game.Name);
         }
 
-        private void PublishNextPurchase(Game game)
+        private void PublishNextPurchase(Game game, string subscriber)
         {
             var message = $"New Game Purchased: {game.Name} ({game.Genre})";
             var body = Encoding.UTF8.GetBytes(message);
@@ -136,7 +146,7 @@ namespace StatsServer
                 basicProperties: null,
                 body: body);
 
-            Console.WriteLine(" [x] New Game Purchased: {0}", message);
+            Console.WriteLine(" [x] New Game Purchased: {0} for subscriber {1}", message, subscriber);
         }
     }
 }
