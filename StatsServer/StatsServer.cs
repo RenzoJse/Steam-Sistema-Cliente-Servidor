@@ -44,7 +44,7 @@ namespace StatsServer
             //Defino el mecanismo de consumo
             var consumer = new EventingBasicConsumer(channel);
             //Defino el evento que sera invocado cuando llegue un mensaje
-            consumer.Received += (model, ea) =>
+            consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
@@ -78,6 +78,11 @@ namespace StatsServer
                         var clientId = Guid.NewGuid().ToString();
                         _subscribers[clientId] = count;
                     }
+                }
+
+                if (message.Contains("Modify"))
+                {
+                    ModifyGame(message);
                 }
 
             };
@@ -147,6 +152,68 @@ namespace StatsServer
                 body: body);
 
             Console.WriteLine(" [x] New Game Purchased: {0} for subscriber {1}", message, subscriber);
+        }
+
+        private async Task ModifyGame(string message)
+        {
+            var parts = message.Split(new[] { "Modify-", "-" }, StringSplitOptions.None);
+            if (parts.Length >= 3)
+            {
+                var field = parts[1].Trim();
+                var newValue = parts[2].Trim();
+                var gameName = parts[3].Trim();
+                var game = await _gameRepository.GetGameByName(gameName);
+
+                if (game != null)
+                {
+                    switch (field.ToLower())
+                    {
+                        case "name":
+                            game.Name = newValue;
+                            break;
+                        case "genre":
+                            game.Genre = newValue;
+                            break;
+                        case "release date":
+                            if (DateTime.TryParse(newValue, out var newReleaseDate))
+                            {
+                                game.ReleaseDate = newReleaseDate;
+                            }
+                            else
+                            {
+                                throw new ArgumentException("Invalid date format.");
+                            }
+
+                            break;
+                        case "platform":
+                            game.Platform = newValue;
+                            break;
+                        case "publisher":
+                            game.Publisher = newValue;
+                            break;
+                        case "units available":
+                            if (int.TryParse(newValue, out var newUnitsAvailable))
+                            {
+                                game.UnitsAvailable = newUnitsAvailable;
+                            }
+                            else
+                            {
+                                throw new ArgumentException("Invalid number format.");
+                            }
+
+                            break;
+                        default:
+                            throw new ArgumentException("Invalid field.");
+                    }
+
+                    await _gameRepository.UpdateGame(game);
+                    Console.WriteLine($"Game {gameName} modified: {field} updated to {newValue}");
+                }
+                else
+                {
+                    Console.WriteLine($"Game {gameName} not found.");
+                }
+            }
         }
     }
 }

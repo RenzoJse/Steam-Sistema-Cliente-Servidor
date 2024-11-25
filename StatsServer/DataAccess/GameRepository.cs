@@ -67,11 +67,18 @@ public class GameRepository
         }
     }
 
-    public bool DoesGameExist(string name)
+    public async Task UpdateGame(Game game)
     {
+        if (game == null) throw new ArgumentNullException(nameof(game));
+
         lock (_lock)
         {
-            return _games.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var existingGame = _games.FirstOrDefault(g => g.Name == game.Name);
+            if (existingGame != null)
+            {
+                _games.Remove(existingGame);
+                _games.Add(game);
+            }
         }
     }
 

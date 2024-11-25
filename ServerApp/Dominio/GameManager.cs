@@ -50,14 +50,6 @@ namespace ServerApp.Dominio
             return _games.FirstOrDefault(g => g.Name == name);
         }
 
-        public void AddGame(Game game)
-        {
-            lock (_lock)
-            {
-                _games.Add(game);
-            }
-        }
-
         public static void RemoveGame(string name)
         {
             lock (_lock)
@@ -65,6 +57,7 @@ namespace ServerApp.Dominio
                 var game = GetGameByName(name);
                 if (game != null)
                 {
+                    SendMom.SendMessageToMom("Deleted: " + name);
                     _games.Remove(game);
                 }
             }

@@ -347,7 +347,6 @@ public class TcpServer
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Images", $"{gameName}.jpg");
                 if (File.Exists(imagePath)) File.Delete(imagePath);
 
-                SendMom.SendMessageToMom("Deleted: " + gameName);
                 await SuccesfulResponse("Game and its image deleted successfully.", networkDataHelper);
             }
             else
@@ -526,27 +525,35 @@ public class TcpServer
             switch (field.ToLower())
             {
                 case "title":
+                    SendMom.SendMessageToMom("Modify-Name-" + newValue + "-" + game.Name);
                     game.Name = newValue;
                     break;
                 case "genre":
+                    SendMom.SendMessageToMom("Modify-Genre-" + newValue + "-" + game.Name);
                     game.Genre = newValue;
                     break;
                 case "release date":
                     if (DateTime.TryParse(newValue, out var newReleaseDate))
+                    {
+                        SendMom.SendMessageToMom("Modify-ReleaseDate-" + "-" + game.Name);
                         game.ReleaseDate = newReleaseDate;
-                    else
+                    }else
                         throw new ArgumentException("Invalid date format.");
                     break;
                 case "platform":
+                    SendMom.SendMessageToMom("Modify-Platform-" + newValue + "-" + game.Name);
                     game.Platform = newValue;
                     break;
                 case "publisher":
+                    SendMom.SendMessageToMom("Modify-Publisher-" + newValue + "-" + game.Name);
                     game.Publisher = newValue;
                     break;
                 case "units available":
                     if (int.TryParse(newValue, out var newUnitsAvailable))
+                    {
+                        SendMom.SendMessageToMom("Modify-Units-" + newUnitsAvailable + "-" + game.Name);
                         game.UnitsAvailable = newUnitsAvailable;
-                    else
+                    }else
                         throw new ArgumentException("Invalid number format.");
                     break;
                 default:
