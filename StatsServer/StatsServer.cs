@@ -14,7 +14,8 @@ namespace StatsServer
     {
         private readonly StatsData _statsData;
         private readonly GameRepository _gameRepository;
-
+        private readonly IModel _publishChannel;
+        private int _nextPurchasesCount = 0;
         public StatsServer(StatsData statsData, GameRepository gameRepository)
         {
             _statsData = statsData;
@@ -24,6 +25,13 @@ namespace StatsServer
 
             var connection = factory.CreateConnection();
             var channel = connection.CreateModel();
+            _publishChannel = connection.CreateModel();
+
+            _publishChannel.QueueDeclare(queue: "next_purchases",
+                durable: false,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
 
             channel.QueueDeclare(queue: "steam_logs", // en el canal, definimos la Queue de la conexion
                 durable: false,
@@ -60,6 +68,15 @@ namespace StatsServer
                     _ = DeleteGame(message);
                 }
 
+                if (message.Contains("View Next Purchases:"))
+                {
+                    var parts = message.Split(':');
+                    if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out int count))
+                    {
+                        _nextPurchasesCount = count;
+                    }
+                }
+
             };
 
             //"PRENDO" el consumo de mensajes
@@ -71,7 +88,7 @@ namespace StatsServer
         private async Task DeleteGame(string message)
         {
             var gameName = message.Split(new[] { "Deleted: " }, StringSplitOptions.None)[1].Trim();
-            _gameRepository.RemoveGame(gameName);
+            await _gameRepository.RemoveGame(gameName);
         }
 
         private async Task ModifyGameUnits(string message)
@@ -79,6 +96,12 @@ namespace StatsServer
             var gameName = message.Split(new[] { "Buy Game: " }, StringSplitOptions.None)[1].Trim();
             var game = _gameRepository.GetGameByName(gameName);
             await _gameRepository.DiscountPurchasedGame(await game);
+
+            if (_nextPurchasesCount > 0)
+            {
+                PublishNextPurchase(await game);
+                _nextPurchasesCount--;
+            }
         }
 
         private async Task AddNewGame(string message)
@@ -101,6 +124,19 @@ namespace StatsServer
 
             await _gameRepository.AddGame(game);
             Console.WriteLine("New game added: " + game.Name);
+        }
+
+        private void PublishNextPurchase(Game game)
+        {
+            var message = $"Next Purchase: {game.Name} ({game.Genre})";
+            var body = Encoding.UTF8.GetBytes(message);
+
+            _publishChannel.BasicPublish(exchange: "",
+                routingKey: "next_purchases",
+                basicProperties: null,
+                body: body);
+
+            Console.WriteLine(" [x] Next Purchase Published: {0}", message);
         }
     }
 }

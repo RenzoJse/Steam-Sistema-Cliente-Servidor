@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace ServerApp.MomMessage;
 
@@ -48,5 +49,38 @@ public class SendMom
                 null,
                 body);
         }
+    }
+
+    public void SuscribeToMom(int n)
+    {
+        var factory = new ConnectionFactory() { HostName = "localhost" };
+        using var connection = factory.CreateConnection();
+        using var channel = connection.CreateModel();
+
+        channel.QueueDeclare(queue: "next_purchases",
+            durable: false,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        var consumer = new EventingBasicConsumer(channel);
+        consumer.Received += (model, ea) =>
+        {
+            var body = ea.Body.ToArray();
+            var message = Encoding.UTF8.GetString(body);
+            Console.WriteLine(" [x] Received {0}", message);
+            n--;
+            if (n <= 0)
+            {
+                Console.WriteLine("Finished sending messages. Reached the limit of purchases to view.");
+            }
+        };
+
+        channel.BasicConsume(queue: "next_purchases",
+            autoAck: true,
+            consumer: consumer);
+
+        Console.WriteLine("Subscribed to next purchases queue. Waiting for messages...");
+        Console.ReadLine(); // Keep the application running
     }
 }

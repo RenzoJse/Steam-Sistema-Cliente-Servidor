@@ -4,7 +4,7 @@ namespace ServerApp.Dominio
 {
     public class GameManager
     {
-        private static List<Game> _games = new List<Game>();
+        private static List<Game> _games = [];
         private static object _lock = new object();
 
         public GameManager()

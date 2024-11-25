@@ -119,7 +119,7 @@ public class GameManagementService : GameManagement.GameManagementBase
         }
         catch (InvalidOperationException)
         {
-            // Ignorar la excepción si el flujo ya está completo
+            // The client disconnected, ignore the exception
         }
     }
 

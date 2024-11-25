@@ -21,5 +21,9 @@
   <ItemGroup>
     <Protobuf Include="Protos\game.proto" GrpcServices="Client" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServerApp\ServerApp.csproj" />
+  </ItemGroup>
 	
 </Project>

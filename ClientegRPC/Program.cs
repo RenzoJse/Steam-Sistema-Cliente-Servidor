@@ -2,11 +2,13 @@
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
+using ServerApp.MomMessage;
 
 namespace ClientegRPC
 {
     internal class Program
     {
+        private static readonly SendMom SendMom = new SendMom();
         public static async Task Main(string[] args)
         {
             using var channel = GrpcChannel.ForAddress("http://localhost:5014");
@@ -19,7 +21,8 @@ namespace ClientegRPC
                 Console.WriteLine("2. Delete a Game");
                 Console.WriteLine("3. Modify a Game");
                 Console.WriteLine("4. View Game Reviews");
-                Console.WriteLine("5. Exit");
+                Console.WriteLine("5. Subscribe to Next Purchases Queue");
+                Console.WriteLine("6. Exit");
                 Console.Write("Select an option: ");
                 var option = Console.ReadLine();
 
@@ -38,6 +41,9 @@ namespace ClientegRPC
                         await ViewGameReviews(client);
                         break;
                     case "5":
+                        await SubscribeToNextPurchasesQueue();
+                        break;
+                    case "6":
                         Console.WriteLine("Exiting...");
                         return;
                     default:
@@ -45,6 +51,27 @@ namespace ClientegRPC
                         break;
                 }
             }
+        }
+
+        private static async Task SubscribeToNextPurchasesQueue()
+        {
+            int n;
+            while (true)
+            {
+                Console.Write("How many purchases you wanna see? : ");
+                if (int.TryParse(Console.ReadLine(), out n))
+                {
+                    SendMom.SendMessageToMom("View Next Purchases:" + n);
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input. Please enter a valid integer.");
+                }
+            }
+
+            SendMom.SuscribeToMom(n);
+            await Task.CompletedTask;
         }
 
         private static async Task AddGame(GameManagement.GameManagementClient client)
